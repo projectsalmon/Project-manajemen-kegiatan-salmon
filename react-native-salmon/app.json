@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Kegiatan Kelurahan",
+    "slug": "project-manajemen-kegiatan-salmon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0369A1"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0369A1"
+      },
+      "package": "com.agon.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
