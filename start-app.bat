@@ -15,6 +15,6 @@ echo Menjalankan Expo Server...
 echo Buka aplikasi Expo Go di HP Anda dan scan QR Code yang muncul.
 echo.
 
-call npx expo start
+call npx expo start -c
 
 pause

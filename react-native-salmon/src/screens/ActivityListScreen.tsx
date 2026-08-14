@@ -104,6 +104,7 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScrollView}
         contentContainerStyle={styles.filterChipRow}
       >
         <TouchableOpacity
@@ -112,11 +113,12 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
             selectedCategoryFilter === null && styles.chipActive,
           ]}
           onPress={() => setSelectedCategoryFilter(null)}
+          activeOpacity={0.8}
         >
           {selectedCategoryFilter === null && (
             <MaterialCommunityIcons
               name="check"
-              size={14}
+              size={15}
               color={Colors.onYellowContainer}
             />
           )}
@@ -145,6 +147,7 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
               onPress={() =>
                 setSelectedCategoryFilter(isSelected ? null : catKey)
               }
+              activeOpacity={0.8}
             >
               <Text
                 style={[
@@ -163,6 +166,7 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.regionFilterScrollView}
         contentContainerStyle={styles.regionFilterRow}
       >
         {regions.map((reg) => {
@@ -176,6 +180,7 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
                 isSelected && styles.regionChipActive,
               ]}
               onPress={() => setSelectedRegionFilter(reg)}
+              activeOpacity={0.8}
             >
               <Text
                 style={[
@@ -287,22 +292,31 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: Colors.textNavyDark,
+    includeFontPadding: false,
+  },
+  filterScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
   },
   filterChipRow: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingTop: 8,
+    paddingBottom: 6,
     gap: 8,
+    alignItems: 'center',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 36,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    gap: 4,
+    gap: 5,
   },
   chipActive: {
     backgroundColor: Colors.yellowContainer,
@@ -310,23 +324,35 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
     color: Colors.textNavyDark,
+    includeFontPadding: false,
   },
   chipTextActive: {
     color: Colors.onYellowContainer,
     fontWeight: '700',
   },
+  regionFilterScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   regionFilterRow: {
     paddingHorizontal: 16,
-    paddingVertical: 2,
+    paddingTop: 2,
+    paddingBottom: 6,
     gap: 6,
+    alignItems: 'center',
   },
   regionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.white,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 30,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
@@ -336,8 +362,10 @@ const styles = StyleSheet.create({
   },
   regionChipText: {
     fontSize: 11,
+    lineHeight: 15,
     color: Colors.textNavyDark,
-    fontWeight: '500',
+    fontWeight: '600',
+    includeFontPadding: false,
   },
   regionChipTextActive: {
     color: Colors.onYellowContainer,
@@ -350,7 +378,7 @@ const styles = StyleSheet.create({
   },
   listPadding: {
     paddingHorizontal: 16,
-    paddingBottom: 90,
+    paddingBottom: 110,
   },
   emptyContainer: {
     flex: 1,

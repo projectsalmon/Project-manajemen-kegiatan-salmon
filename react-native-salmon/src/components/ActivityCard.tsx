@@ -307,21 +307,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+    gap: 6,
   },
   categoryTag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   categoryTagText: {
     fontSize: 12,
     fontWeight: '700',
+    includeFontPadding: false,
   },
   rightTagGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   editIconButton: {
     padding: 4,
@@ -334,11 +337,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     gap: 3,
+    flexShrink: 1,
   },
   regionTagText: {
     fontSize: 11,
     fontWeight: '600',
     color: Colors.skyBlueHeader,
+    includeFontPadding: false,
   },
   titleText: {
     fontSize: 16,

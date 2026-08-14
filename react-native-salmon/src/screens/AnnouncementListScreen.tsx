@@ -178,6 +178,7 @@ export const AnnouncementListScreen: React.FC = () => {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScrollView}
         contentContainerStyle={styles.filterChipRow}
       >
         <TouchableOpacity
@@ -186,6 +187,7 @@ export const AnnouncementListScreen: React.FC = () => {
             selectedUrgency === null && styles.chipActive,
           ]}
           onPress={() => setSelectedUrgency(null)}
+          activeOpacity={0.8}
         >
           <Text
             style={[
@@ -210,6 +212,7 @@ export const AnnouncementListScreen: React.FC = () => {
                 isSelected && { borderColor: meta.badgeColor, borderWidth: 1.5 },
               ]}
               onPress={() => setSelectedUrgency(isSelected ? null : uKey)}
+              activeOpacity={0.8}
             >
               <Text
                 style={[
@@ -512,16 +515,27 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: Colors.textNavyDark,
+    includeFontPadding: false,
+  },
+  filterScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
   },
   filterChipRow: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingTop: 8,
+    paddingBottom: 6,
     gap: 8,
+    alignItems: 'center',
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 36,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -532,8 +546,10 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
     color: Colors.textNavyDark,
+    includeFontPadding: false,
   },
   chipTextActive: {
     color: Colors.onYellowContainer,
@@ -546,7 +562,7 @@ const styles = StyleSheet.create({
   },
   listPadding: {
     paddingHorizontal: 16,
-    paddingBottom: 90,
+    paddingBottom: 110,
   },
   fabButton: {
     position: 'absolute',

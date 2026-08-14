@@ -157,6 +157,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={styles.requirementsScrollView}
             contentContainerStyle={styles.requirementsContainer}
           >
             {announcement.requirements.map((req, idx) => (
@@ -267,6 +268,7 @@ const styles = StyleSheet.create({
   urgencyTagText: {
     fontSize: 11,
     fontWeight: '700',
+    includeFontPadding: false,
   },
   pinnedTag: {
     flexDirection: 'row',
@@ -277,6 +279,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Colors.yellowAccent,
+    includeFontPadding: false,
   },
   rightGroup: {
     flexDirection: 'row',
@@ -289,6 +292,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: Colors.textNavyMuted,
+    includeFontPadding: false,
   },
   titleText: {
     fontSize: 16,
@@ -303,10 +307,15 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginBottom: 8,
   },
+  requirementsScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   requirementsContainer: {
     flexDirection: 'row',
     gap: 6,
     marginBottom: 10,
+    alignItems: 'center',
   },
   reqChip: {
     flexDirection: 'row',
@@ -315,7 +324,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.yellowBorderLis,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 8,
     gap: 4,
   },
@@ -323,6 +332,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Colors.onYellowContainer,
+    includeFontPadding: false,
   },
   footerRow: {
     flexDirection: 'row',
@@ -334,10 +344,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textNavyMuted,
     flexShrink: 1,
+    includeFontPadding: false,
   },
   readMoreText: {
     fontSize: 11,
     fontWeight: '700',
     color: Colors.skyBlueHeader,
+    includeFontPadding: false,
   },
 });

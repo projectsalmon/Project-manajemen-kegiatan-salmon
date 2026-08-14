@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CivicTopBar } from '../components/CivicTopBar';
 import { RoleSwitchSheet } from '../components/RoleSwitchSheet';
 import { Colors, UserRolesMeta } from '../constants/theme';
@@ -38,6 +39,8 @@ const HomeScreenRouter: React.FC<{ navigation: any }> = ({ navigation }) => {
 const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { currentUser, switchRole } = useApp();
   const [isRoleSheetVisible, setIsRoleSheetVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom > 0 ? insets.bottom : 10;
 
   const roleMeta = UserRolesMeta[currentUser.role] || UserRolesMeta.WARGA;
 
@@ -60,13 +63,14 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
             backgroundColor: Colors.white,
             borderTopWidth: 1,
             borderTopColor: Colors.borderLight,
-            height: 60,
-            paddingBottom: 8,
+            height: 56 + bottomInset,
+            paddingBottom: bottomInset,
             paddingTop: 6,
           },
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '700',
+            includeFontPadding: false,
           },
         }}
       >
@@ -92,7 +96,7 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
             tabBarLabel: 'Kegiatan',
             tabBarIcon: ({ color, size, focused }) => (
               <MaterialCommunityIcons
-                name={focused ? 'calendar-month' : 'calendar-month-outline'}
+                name={focused ? 'format-list-checks' : 'format-list-bulleted'}
                 size={size}
                 color={focused ? Colors.yellowAccent : color}
               />
@@ -108,6 +112,21 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
             tabBarIcon: ({ color, size, focused }) => (
               <MaterialCommunityIcons
                 name={focused ? 'bullhorn' : 'bullhorn-outline'}
+                size={size}
+                color={focused ? Colors.yellowAccent : color}
+              />
+            ),
+          }}
+        />
+
+        <Tab.Screen
+          name="KalenderTab"
+          component={CalendarScreen}
+          options={{
+            tabBarLabel: 'Kalender',
+            tabBarIcon: ({ color, size, focused }) => (
+              <MaterialCommunityIcons
+                name={focused ? 'calendar-month' : 'calendar-month-outline'}
                 size={size}
                 color={focused ? Colors.yellowAccent : color}
               />

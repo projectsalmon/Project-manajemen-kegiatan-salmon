@@ -4,7 +4,6 @@
     "slug": "project-manajemen-kegiatan-salmon",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -19,8 +18,10 @@
       },
       "package": "com.agon.app"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "extra": {
+      "eas": {
+        "projectId": "a3eb15e8-d14d-46c8-9a76-b96e4748a4e1"
+      }
     }
   }
 }

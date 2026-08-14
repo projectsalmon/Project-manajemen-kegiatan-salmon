@@ -95,7 +95,7 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
         <TouchableOpacity
           style={styles.shortcutButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('CalendarScreen')}
+          onPress={() => navigation.navigate('KalenderTab')}
         >
           <MaterialCommunityIcons
             name="calendar-month"
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   heroCard: {
     backgroundColor: Colors.skyBlueHeader,

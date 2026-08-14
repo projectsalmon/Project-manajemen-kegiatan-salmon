@@ -13,13 +13,15 @@ import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface CalendarScreenProps {
+  route?: any;
   navigation: any;
 }
 
-export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) => {
+export const CalendarScreen: React.FC<CalendarScreenProps> = ({ route, navigation }) => {
   const { currentUser, activities, updateRsvpStatus } = useApp();
   const [selectedDay, setSelectedDay] = useState(18);
 
+  const isTabScreen = route?.name === 'KalenderTab';
   const isAdmin = currentUser.role !== 'WARGA';
   const currentMonthName = 'Mei 2025';
   const totalDays = 31;
@@ -45,28 +47,12 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
 
   const rows = Math.ceil((totalDays + startOffset) / 7);
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* 1. APP BAR */}
-      <View style={styles.topAppBar}>
-        <TouchableOpacity
-          style={styles.topIconButton}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={24}
-            color={Colors.textNavyDark}
-          />
-        </TouchableOpacity>
-        <Text style={styles.topAppBarTitle}>Kalender Kegiatan</Text>
-      </View>
-
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+  const renderContent = () => (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
         {/* 2. CALENDAR CARD */}
         <View style={styles.calendarCard}>
           <View style={styles.calendarHeader}>
@@ -212,13 +198,41 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ navigation }) =>
             />
           ))
         )}
-      </ScrollView>
+    </ScrollView>
+  );
+
+  if (isTabScreen) {
+    return <View style={styles.tabContainer}>{renderContent()}</View>;
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* 1. APP BAR (Only in stack mode) */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          style={styles.topIconButton}
+          onPress={() => navigation.goBack()}
+        >
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={24}
+            color={Colors.textNavyDark}
+          />
+        </TouchableOpacity>
+        <Text style={styles.topAppBarTitle}>Kalender Kegiatan</Text>
+      </View>
+
+      {renderContent()}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
+    backgroundColor: Colors.skyBlueBackground,
+  },
+  tabContainer: {
     flex: 1,
     backgroundColor: Colors.skyBlueBackground,
   },
@@ -246,7 +260,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   calendarCard: {
     backgroundColor: Colors.white,

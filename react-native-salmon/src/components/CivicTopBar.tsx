@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/theme';
 import { UserRoleType } from '../types';
@@ -20,8 +21,15 @@ export const CivicTopBar: React.FC<CivicTopBarProps> = ({
   onProfileClick,
   titleOverride,
 }) => {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: Math.max(insets.top, 10) + 4, paddingBottom: 10 },
+      ]}
+    >
       <View style={styles.titleSection}>
         <View style={styles.iconBox}>
           <MaterialCommunityIcons name="city" size={20} color={Colors.white} />

@@ -100,6 +100,7 @@ interface AppContextType {
   updateContact: (id: string, nameTitle: string, phoneNumber: string, category: string) => void;
   deleteContact: (contactId: string) => void;
   addDocumentationPhoto: (activityId: string, photoUrl: string) => void;
+  deleteDocumentationPhoto: (activityId: string, photoUrl: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -414,13 +415,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (item.id !== activityId) return item;
         return {
           ...item,
-          photos: [photoUrl, ...item.photos],
+          photos: [photoUrl, ...(item.photos || [])],
         };
       });
       persistActivities(updated);
       return updated;
     });
-    showToast('Foto dokumentasi baru berhasil diunggah!');
+    showToast('Foto dokumentasi baru berhasil ditambahkan!');
+  };
+
+  const deleteDocumentationPhoto = (activityId: string, photoUrl: string) => {
+    setActivities((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== activityId) return item;
+        return {
+          ...item,
+          photos: (item.photos || []).filter((p) => p !== photoUrl),
+        };
+      });
+      persistActivities(updated);
+      return updated;
+    });
+    showToast('Foto dokumentasi dihapus.');
   };
 
   const addAnnouncement = (params: {
@@ -602,6 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateContact,
         deleteContact,
         addDocumentationPhoto,
+        deleteDocumentationPhoto,
       }}
     >
       {children}

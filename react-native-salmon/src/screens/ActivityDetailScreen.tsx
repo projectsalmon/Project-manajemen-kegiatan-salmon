@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   Modal,
   Platform,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { MapPreviewCard } from '../components/MapPreviewCard';
 import {
   CategoryMeta,
@@ -31,10 +33,17 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   navigation,
 }) => {
   const { activityId } = route.params || {};
-  const { currentUser, activities, updateRsvpStatus, addDocumentationPhoto, showToast } =
-    useApp();
+  const {
+    currentUser,
+    activities,
+    updateRsvpStatus,
+    addDocumentationPhoto,
+    deleteDocumentationPhoto,
+    showToast,
+  } = useApp();
 
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+  const [isUploadPickerVisible, setIsUploadPickerVisible] = useState(false);
 
   const activity = activities.find((a) => a.id === activityId);
 
@@ -56,7 +65,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const organizerRoleInfo = UserRolesMeta[activity.organizerRole] || UserRolesMeta.WARGA;
   const isAdmin = currentUser.role !== 'WARGA';
 
-  // Default gallery photos + activity photos
+  // Default gallery photos + user uploaded photos
   const defaultDocs = [
     'https://images.pexels.com/photos/8460159/pexels-photo-8460159.jpeg?auto=compress&cs=tinysrgb&w=800',
     'https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800',
@@ -83,10 +92,51 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     }
   };
 
-  const handleUploadPhoto = () => {
-    const newSamplePhoto =
-      'https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800';
-    addDocumentationPhoto(activity.id, newSamplePhoto);
+  const handlePickFromGallery = async () => {
+    setIsUploadPickerVisible(false);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showToast('Izin akses galeri diperlukan untuk memilih foto.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        addDocumentationPhoto(activity.id, result.assets[0].uri);
+      }
+    } catch (e) {
+      console.warn('Picker error:', e);
+      showToast('Gagal membuka galeri foto.');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    setIsUploadPickerVisible(false);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        showToast('Izin akses kamera diperlukan untuk mengambil foto.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        addDocumentationPhoto(activity.id, result.assets[0].uri);
+      }
+    } catch (e) {
+      console.warn('Camera error:', e);
+      showToast('Gagal membuka kamera HP.');
+    }
   };
 
   const currentRsvp = activity.userRsvpStatus;
@@ -288,11 +338,12 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           <Text style={styles.sectionHeaderTitle}>Foto & Dokumentasi Kegiatan</Text>
           <TouchableOpacity
             style={styles.uploadDocButton}
-            onPress={handleUploadPhoto}
+            onPress={() => setIsUploadPickerVisible(true)}
+            activeOpacity={0.8}
           >
             <MaterialCommunityIcons
               name="camera-plus"
-              size={14}
+              size={15}
               color={Colors.skyBlueHeader}
             />
             <Text style={styles.uploadDocButtonText}>Upload Foto</Text>
@@ -302,11 +353,12 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.galleryScrollView}
           contentContainerStyle={styles.galleryScroll}
         >
           {allPhotos.map((photo, index) => (
             <TouchableOpacity
-              key={index}
+              key={`${photo}-${index}`}
               style={styles.photoThumbContainer}
               activeOpacity={0.85}
               onPress={() => setPreviewPhotoUrl(photo)}
@@ -437,7 +489,86 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         </View>
       </View>
 
-      {/* 5. FULLSCREEN PHOTO PREVIEW MODAL */}
+      {/* 5. UPLOAD SOURCE SELECTION MODAL (CAMERA / GALLERY) */}
+      <Modal
+        visible={isUploadPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsUploadPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.pickerModalBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsUploadPickerVisible(false)}
+        >
+          <View style={styles.pickerSheetContainer}>
+            <View style={styles.pickerHandle} />
+            <Text style={styles.pickerTitle}>Unggah Foto Dokumentasi</Text>
+            <Text style={styles.pickerSubtitle}>
+              Pilih sumber foto dari smartphone Anda
+            </Text>
+
+            <TouchableOpacity
+              style={styles.pickerOptionCard}
+              activeOpacity={0.8}
+              onPress={handleTakePhoto}
+            >
+              <View style={[styles.pickerIconCircle, { backgroundColor: '#E0F2FE' }]}>
+                <MaterialCommunityIcons
+                  name="camera"
+                  size={24}
+                  color={Colors.skyBlueHeader}
+                />
+              </View>
+              <View style={styles.pickerOptionInfo}>
+                <Text style={styles.pickerOptionTitle}>Ambil dari Kamera</Text>
+                <Text style={styles.pickerOptionDesc}>
+                  Foto langsung dokumentasi kegiatan saat ini
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={Colors.textNavyMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.pickerOptionCard}
+              activeOpacity={0.8}
+              onPress={handlePickFromGallery}
+            >
+              <View style={[styles.pickerIconCircle, { backgroundColor: Colors.yellowContainer }]}>
+                <MaterialCommunityIcons
+                  name="image-multiple"
+                  size={24}
+                  color={Colors.onYellowContainer}
+                />
+              </View>
+              <View style={styles.pickerOptionInfo}>
+                <Text style={styles.pickerOptionTitle}>Pilih dari Galeri HP</Text>
+                <Text style={styles.pickerOptionDesc}>
+                  Pilih file gambar yang tersimpan di memori HP
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={Colors.textNavyMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.pickerCancelButton}
+              onPress={() => setIsUploadPickerVisible(false)}
+            >
+              <Text style={styles.pickerCancelText}>Batal</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 6. FULLSCREEN PHOTO PREVIEW MODAL */}
       <Modal
         visible={previewPhotoUrl !== null}
         transparent
@@ -461,22 +592,42 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
               />
             )}
 
-            <TouchableOpacity
-              style={styles.modalDownloadButton}
-              onPress={() => {
-                showToast('Foto berhasil diunduh ke galeri HP!');
-                setPreviewPhotoUrl(null);
-              }}
-            >
-              <MaterialCommunityIcons
-                name="download"
-                size={20}
-                color={Colors.onYellowContainer}
-              />
-              <Text style={styles.modalDownloadButtonText}>
-                Download Foto ke HP
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.modalActionsRow}>
+              {previewPhotoUrl && activity.photos?.includes(previewPhotoUrl) && (
+                <TouchableOpacity
+                  style={styles.modalDeleteButton}
+                  onPress={() => {
+                    deleteDocumentationPhoto(activity.id, previewPhotoUrl);
+                    setPreviewPhotoUrl(null);
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="trash-can-outline"
+                    size={20}
+                    color={Colors.urgentRed}
+                  />
+                  <Text style={styles.modalDeleteButtonText}>Hapus Foto</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.modalDownloadButton,
+                  previewPhotoUrl && activity.photos?.includes(previewPhotoUrl) && { flex: 1 },
+                ]}
+                onPress={() => {
+                  showToast('Foto tersimpan!');
+                  setPreviewPhotoUrl(null);
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="check"
+                  size={20}
+                  color={Colors.onYellowContainer}
+                />
+                <Text style={styles.modalDownloadButtonText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
           </SafeAreaView>
         </View>
       </Modal>
@@ -803,6 +954,32 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginVertical: 16,
   },
+  galleryScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalDeleteButton: {
+    height: 50,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: Colors.urgentRed,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  modalDeleteButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.urgentRed,
+  },
   modalDownloadButton: {
     height: 50,
     backgroundColor: Colors.yellowHighlight,
@@ -816,6 +993,84 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: Colors.onYellowContainer,
+  },
+  pickerModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheetContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+  },
+  pickerHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.borderLight,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textNavyDark,
+    textAlign: 'center',
+  },
+  pickerSubtitle: {
+    fontSize: 12,
+    color: Colors.textNavyMuted,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 16,
+  },
+  pickerOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  pickerIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  pickerOptionInfo: {
+    flex: 1,
+  },
+  pickerOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  pickerOptionDesc: {
+    fontSize: 11,
+    color: Colors.textNavySecondary,
+    marginTop: 2,
+  },
+  pickerCancelButton: {
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    backgroundColor: Colors.skyBlueSurfaceVariant,
+  },
+  pickerCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textNavySecondary,
   },
   notFoundContainer: {
     flex: 1,
