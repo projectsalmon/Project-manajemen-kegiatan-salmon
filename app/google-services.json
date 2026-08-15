@@ -1,0 +1,34 @@
+{
+  "project_info": {
+    "project_number": "957812902323",
+    "project_id": "manajemen-kegiatan-salmon",
+    "storage_bucket": "manajemen-kegiatan-salmon.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:957812902323:android:e84dd26cb63490bfef23c6",
+        "android_client_info": {
+          "package_name": "com.salmon.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "957812902323-sla7uv6hfrh0te1b3vre9jdu5nga452g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFmBz3xEHHi-Ii4nWm0hUoUZs7ylTHhK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

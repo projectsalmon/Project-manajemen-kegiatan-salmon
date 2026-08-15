@@ -40,6 +40,7 @@ interface AppContextType {
   showToast: (msg: string) => void;
   clearToast: () => void;
   switchRole: (newRole: UserRoleType) => void;
+  loginWithGoogleProfile: (profile: { email: string; name: string; photoUrl?: string }) => void;
   updateRsvpStatus: (activityId: string, newStatus: RsvpStatusType) => void;
   addActivity: (params: {
     title: string;
@@ -198,6 +199,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(updatedProfile);
     persistProfile(updatedProfile);
     showToast(`Beralih ke peran: ${newRole}`);
+  };
+
+  const loginWithGoogleProfile = (profile: { email: string; name: string; photoUrl?: string }) => {
+    const isAdmin = profile.email.toLowerCase().trim() === 'salmanakhdanhidayat@gmail.com';
+    const assignedRole: UserRoleType = isAdmin ? 'STAF_KELURAHAN' : 'WARGA';
+
+    const updatedProfile: UserProfile = {
+      id: profile.email,
+      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga Sukamaju'),
+      nik: isAdmin ? '3201012345670001' : '3201019876540002',
+      email: profile.email,
+      phone: '081234567890',
+      role: assignedRole,
+      rt: '002',
+      rw: '005',
+      kelurahan: 'Sukamaju',
+      avatarUrl: profile.photoUrl || undefined,
+    };
+
+    setCurrentUser(updatedProfile);
+    persistProfile(updatedProfile);
+    showToast(`Selamat datang, ${updatedProfile.name}!`);
   };
 
   const updateRsvpStatus = (activityId: string, newStatus: RsvpStatusType) => {
@@ -602,6 +625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast,
         clearToast,
         switchRole,
+        loginWithGoogleProfile,
         updateRsvpStatus,
         addActivity,
         updateActivity,

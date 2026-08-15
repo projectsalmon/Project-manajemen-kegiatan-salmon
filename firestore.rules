@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Periksa apakah pengguna terautentikasi
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Periksa apakah pengguna adalah Administrator
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email.lower() == 'salmanakhdanhidayat@gmail.com' ||
+        request.auth.token.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    // Helper: Periksa apakah pengguna adalah pemilik data (Owner)
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Aturan untuk Koleksi Pengguna (/users/{userId})
+    match /users/{userId} {
+      // Pengguna dapat membaca data profil miliknya sendiri, Admin dapat membaca semua
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      
+      // Pengguna dapat memperbarui profilnya sendiri (namun tidak dapat menaikkan rolenya menjadi admin)
+      allow write: if isAdmin() || (
+        isOwner(userId) && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+          (request.auth.token.email.lower() == 'salmanakhdanhidayat@gmail.com' && request.resource.data.role == 'admin') ||
+          request.resource.data.role == 'member'
+        )
+      );
+    }
+
+    // Aturan untuk Koleksi Kegiatan (/activities/{activityId})
+    match /activities/{activityId} {
+      // Semua pengguna terautentikasi (atau publik) dapat membaca kegiatan yang dipublikasikan
+      allow read: if resource == null || resource.data.approvalStatus == 'PUBLISHED' || isAuthenticated();
+
+      // Anggota / Member dapat membuat kegiatan baru dengan melampirkan userId miliknya
+      allow create: if isAuthenticated() && (
+        isAdmin() || request.resource.data.userId == request.auth.uid
+      );
+
+      // Anggota / Member hanya dapat mengubah atau menghapus data kegiatan miliknya sendiri
+      // Admin memiliki hak akses penuh untuk mengelola, menyetujui, dan menghapus seluruh kegiatan
+      allow update, delete: if isAdmin() || (
+        isAuthenticated() && resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Aturan untuk Koleksi Pengumuman (/announcements/{announcementId})
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Aturan untuk Kontak Penting (/contacts/{contactId})
+    match /contacts/{contactId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

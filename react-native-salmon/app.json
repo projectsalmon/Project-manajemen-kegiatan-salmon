@@ -16,12 +16,15 @@
       "adaptiveIcon": {
         "backgroundColor": "#0369A1"
       },
-      "package": "com.agon.app"
+      "package": "com.salmon.app"
     },
     "extra": {
       "eas": {
         "projectId": "a3eb15e8-d14d-46c8-9a76-b96e4748a4e1"
       }
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AgonApp"
+rootProject.name = "SalmonApp"
 include(":app")

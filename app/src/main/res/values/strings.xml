@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">Kegiatan Kelurahan</string>
+    <string name="app_name">Konek</string>
+    <!-- Web Client ID for Google Credential Manager & Firebase Authentication -->
+    <string name="default_web_client_id">957812902323-sla7uv6hfrh0te1b3vre9jdu5nga452g.apps.googleusercontent.com</string>
 </resources>

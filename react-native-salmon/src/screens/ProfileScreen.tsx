@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   Linking,
   Modal,
   ScrollView,
@@ -121,9 +122,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       {/* 1. PROFILE IDENTITY CARD */}
       <View style={styles.profileHeaderCard}>
         <View style={styles.avatarCircle}>
-          <Text style={styles.avatarLetter}>
-            {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-          </Text>
+          {currentUser.avatarUrl ? (
+            <Image
+              source={{ uri: currentUser.avatarUrl }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarLetter}>
+              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+            </Text>
+          )}
         </View>
 
         <Text style={styles.profileName}>{currentUser.name}</Text>
@@ -478,6 +486,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
     elevation: 2,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarLetter: {
     fontSize: 28,
