@@ -42,7 +42,7 @@ fun LoginScreen(
     onLoginSuccess: (UserProfile) -> Unit
 ) {
     val context = LocalContext.current
-    val webClientId = stringResource(id = R.string.default_web_client_id)
+    val webClientId = "957812902323-sla7uv6hfrh0te1b3vre9jdu5nga452g.apps.googleusercontent.com"
 
     // Launcher Google Play Services Auth
     val googleSignInLauncher = rememberLauncherForActivityResult(
