@@ -2,20 +2,6 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import {
-  useFonts,
-  OpenSans_400Regular,
-  OpenSans_500Medium,
-  OpenSans_600SemiBold,
-  OpenSans_700Bold,
-  OpenSans_800ExtraBold,
-} from '@expo-google-fonts/open-sans';
-import {
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
 import { Colors } from './src/constants/theme';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
@@ -42,26 +28,6 @@ const ToastOverlay: React.FC = () => {
 };
 
 export default function App() {
-  const [fontsLoaded, fontError] = useFonts({
-    OpenSans_400Regular,
-    OpenSans_500Medium,
-    OpenSans_600SemiBold,
-    OpenSans_700Bold,
-    OpenSans_800ExtraBold,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-  });
-
-  if (!fontsLoaded && !fontError) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.skyBlueHeader} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaProvider>
       <AppProvider>

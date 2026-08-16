@@ -8,6 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
     "noEmit": true
   },
   "include": [
@@ -15,7 +16,8 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
-  ],
-  "extends": "expo/tsconfig.base"
+    "node_modules",
+    "android",
+    "ios"
+  ]
 }
