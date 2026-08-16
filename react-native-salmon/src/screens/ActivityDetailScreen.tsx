@@ -19,7 +19,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { MapPreviewCard } from '../components/MapPreviewCard';
 import { VerificationModal } from '../components/VerificationModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
-import { CategoryMeta, Colors, UserRolesMeta } from '../constants/theme';
+import {
+  CategoryMeta,
+  Colors,
+  FontFamily,
+  UserRolesMeta,
+} from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { RsvpStatusType } from '../types';
 import { buildActivityApprovalMessage } from '../utils/whatsappHelpers';
@@ -1291,7 +1296,7 @@ const styles = StyleSheet.create({
   },
   heroTapExpandText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.white,
   },
   categoryRegionRow: {
@@ -1305,8 +1310,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   categoryTagText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontFamily: FontFamily.bold,
   },
   targetRegionTag: {
     backgroundColor: Colors.skyBlueSurfaceVariant,
@@ -1315,15 +1320,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   targetRegionTagText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: FontFamily.semiBold,
     color: Colors.skyBlueHeader,
   },
   detailTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 19,
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.textNavyDark,
-    lineHeight: 28,
+    lineHeight: 27,
   },
   organizerCard: {
     backgroundColor: Colors.white,
@@ -1344,14 +1349,14 @@ const styles = StyleSheet.create({
   },
   organizerAvatarText: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingBold,
   },
   organizerInfo: {
     flex: 1,
   },
   organizerName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
   },
   organizerRoleRow: {
@@ -1367,6 +1372,7 @@ const styles = StyleSheet.create({
   },
   organizerRoleText: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
   },
   statusPill: {
@@ -1377,7 +1383,7 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.kesehatanGreen,
   },
   approvalStatusBanner: {
@@ -1398,11 +1404,12 @@ const styles = StyleSheet.create({
   },
   approvalStatusBannerTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   approvalStatusBannerSub: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.onYellowContainer,
     marginTop: 2,
     lineHeight: 16,
@@ -1419,7 +1426,7 @@ const styles = StyleSheet.create({
   },
   requestApprovalWaBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.white,
   },
   sectionCard: {
@@ -1431,12 +1438,13 @@ const styles = StyleSheet.create({
   },
   sectionHeaderTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
     marginBottom: 8,
   },
   descriptionText: {
     fontSize: 13,
+    fontFamily: FontFamily.regular,
     lineHeight: 20,
     color: Colors.textNavySecondary,
   },

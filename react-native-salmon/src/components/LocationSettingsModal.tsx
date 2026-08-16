@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { LocationPresetItem } from '../types';
 
@@ -332,11 +332,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   modalSubtitle: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
@@ -356,8 +357,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   addNewTriggerText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   formCard: {
@@ -376,17 +377,17 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   formCancelText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.urgentRed,
   },
   inputLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
     marginBottom: 4,
     marginTop: 6,
@@ -397,6 +398,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 12,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -413,12 +415,12 @@ const styles = StyleSheet.create({
   },
   saveFormBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   listSectionTitle: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
     marginBottom: 8,
     textTransform: 'uppercase',
@@ -439,6 +441,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
   },
   locationItemCard: {
@@ -469,11 +472,12 @@ const styles = StyleSheet.create({
   },
   locationItemName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
   },
   locationItemAddress: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     marginTop: 1,
   },
@@ -501,8 +505,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   closeFooterBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: FontFamily.bold,
     color: Colors.white,
   },
 });

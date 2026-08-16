@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CivicTopBar } from '../components/CivicTopBar';
-import { Colors, UserRolesMeta } from '../constants/theme';
+import { Colors, FontFamily, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ActivityDetailScreen } from '../screens/ActivityDetailScreen';
 import { ActivityListScreen } from '../screens/ActivityListScreen';
@@ -66,8 +66,8 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
             paddingTop: 6,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '700',
+            fontSize: 10,
+            fontFamily: FontFamily.bold,
             includeFontPadding: false,
           },
         }}

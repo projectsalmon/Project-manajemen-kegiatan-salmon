@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { openWhatsApp } from '../utils/whatsappHelpers';
 
@@ -259,11 +259,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   modalSubtitle: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
@@ -289,12 +290,13 @@ const styles = StyleSheet.create({
   },
   calloutText: {
     fontSize: 12,
+    fontFamily: FontFamily.regular,
     color: Colors.onYellowContainer,
     flex: 1,
     lineHeight: 18,
   },
   boldText: {
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
   },
   recipientCard: {
     backgroundColor: Colors.skyBlueBackground,
@@ -311,14 +313,14 @@ const styles = StyleSheet.create({
   },
   recipientLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   editPhoneTriggerText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   recipientInfoRow: {
@@ -338,7 +340,7 @@ const styles = StyleSheet.create({
   },
   recipientAvatarText: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingBold,
     color: Colors.skyBlueHeader,
   },
   recipientDetails: {
@@ -346,11 +348,12 @@ const styles = StyleSheet.create({
   },
   recipientName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
   },
   recipientRole: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     marginTop: 1,
   },
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
   },
   phoneNumberText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
   },
   phoneInputBox: {
@@ -378,7 +381,7 @@ const styles = StyleSheet.create({
   },
   phoneInputLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: FontFamily.semiBold,
     color: Colors.textNavySecondary,
     marginBottom: 4,
   },
@@ -388,6 +391,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 12,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -408,8 +412,8 @@ const styles = StyleSheet.create({
   },
   contactChipText: {
     fontSize: 10,
+    fontFamily: FontFamily.semiBold,
     color: Colors.textNavyDark,
-    fontWeight: '600',
   },
   previewBoxContainer: {
     backgroundColor: '#F8FAFC',
@@ -426,7 +430,7 @@ const styles = StyleSheet.create({
   },
   previewBoxLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavySecondary,
   },
   messageBubble: {
@@ -458,7 +462,7 @@ const styles = StyleSheet.create({
   },
   sendWhatsAppButtonText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.white,
   },
   laterButton: {
@@ -466,8 +470,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   laterButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontFamily: FontFamily.semiBold,
     color: Colors.textNavyMuted,
   },
 });

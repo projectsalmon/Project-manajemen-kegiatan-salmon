@@ -15,7 +15,12 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { VerificationModal } from '../components/VerificationModal';
-import { Colors, RsvpStatusMeta, UserRolesMeta } from '../constants/theme';
+import {
+  Colors,
+  FontFamily,
+  RsvpStatusMeta,
+  UserRolesMeta,
+} from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ContactItem, RegionInvitationCode, UserRoleType } from '../types';
 
@@ -1238,16 +1243,17 @@ const styles = StyleSheet.create({
   },
   avatarLetter: {
     fontSize: 30,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.skyBlueHeader,
   },
   profileName: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
   },
   profileNik: {
     fontSize: 12,
+    fontFamily: FontFamily.medium,
     color: 'rgba(255, 255, 255, 0.85)',
     marginTop: 2,
     marginBottom: 10,
@@ -1268,8 +1274,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   roleBadgePillText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
   },
   editProfileBtn: {
@@ -1284,8 +1290,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   editProfileBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   verificationCard: {
@@ -1315,11 +1321,12 @@ const styles = StyleSheet.create({
   },
   verificationTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
   },
   verificationSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     marginTop: 3,
     lineHeight: 16,
@@ -1337,8 +1344,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   verifyNowButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   verifiedActionsRow: {
@@ -1357,7 +1364,7 @@ const styles = StyleSheet.create({
   },
   reverifyButtonText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   resetVerificationBtn: {
@@ -1366,6 +1373,7 @@ const styles = StyleSheet.create({
   },
   resetVerificationBtnText: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     textDecorationLine: 'underline',
   },
@@ -1378,6 +1386,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderSubtitle: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
@@ -1392,7 +1401,7 @@ const styles = StyleSheet.create({
   },
   addCodeHeaderBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   codeItemCard: {
@@ -1417,7 +1426,7 @@ const styles = StyleSheet.create({
   },
   codeBadgeText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
     letterSpacing: 1.5,
   },
@@ -1428,11 +1437,11 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
   },
   codeItemDesc: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FontFamily.semiBold,
     color: Colors.textNavyDark,
     marginBottom: 6,
   },
@@ -1449,8 +1458,8 @@ const styles = StyleSheet.create({
   },
   codeItemMetaText: {
     fontSize: 11,
+    fontFamily: FontFamily.medium,
     color: Colors.textNavySecondary,
-    fontWeight: '500',
   },
   codeItemActionsRow: {
     flexDirection: 'row',
@@ -1469,7 +1478,7 @@ const styles = StyleSheet.create({
   },
   shareWaCodeBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.white,
   },
   toggleActiveCodeBtn: {
@@ -1507,7 +1516,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   headerEditLink: {
@@ -1519,7 +1528,7 @@ const styles = StyleSheet.create({
   },
   headerEditLinkText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   infoRow: {
@@ -1532,12 +1541,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     width: 110,
   },
   infoValue: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
     textAlign: 'right',
   },

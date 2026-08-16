@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 
 interface DatePickerModalProps {
   visible: boolean;
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   closeBtn: {
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   presetChipText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   monthNavRow: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
   monthYearText: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   weekHeaderRow: {
@@ -384,8 +384,8 @@ const styles = StyleSheet.create({
   weekDayText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyMuted,
   },
   daysGrid: {
@@ -410,12 +410,12 @@ const styles = StyleSheet.create({
   },
   dayCellText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
   },
   dayCellTextSelected: {
     color: Colors.white,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
   },
   selectedPreviewBox: {
     flexDirection: 'row',
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   selectedPreviewText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   actionsRow: {
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FontFamily.semiBold,
     color: Colors.textNavySecondary,
   },
   confirmBtn: {
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
 });

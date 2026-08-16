@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface PosyanduHomeScreenProps {
@@ -183,12 +183,12 @@ const styles = StyleSheet.create({
   },
   badgeLabelText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.white,
   },
   heroUserName: {
-    fontSize: 21,
-    fontWeight: '800',
+    fontSize: 20,
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
   },
   metricsRow: {
@@ -203,11 +203,12 @@ const styles = StyleSheet.create({
   },
   metricNumber: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
   },
   metricLabel: {
     fontSize: 10,
+    fontFamily: FontFamily.medium,
     color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 2,
   },
@@ -222,13 +223,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   sectionHeading: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
     marginBottom: 10,
   },
@@ -246,12 +247,13 @@ const styles = StyleSheet.create({
   },
   programTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
     marginTop: 6,
   },
   programSubtitle: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 2,
   },
@@ -262,8 +264,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   seeAllText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
 });

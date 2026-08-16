@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { UserRoleType } from '../types';
 
 interface CivicTopBarProps {
@@ -110,12 +110,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   subTitle: {
-    fontSize: 12,
+    fontSize: 11,
+    fontFamily: FontFamily.medium,
     color: Colors.textNavyMuted,
   },
   actionSection: {
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   avatarButton: {
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
   },
   avatarLetter: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
 });

@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
 import { AnnouncementCard } from '../components/AnnouncementCard';
 import { VerificationModal } from '../components/VerificationModal';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface WargaHomeScreenProps {
@@ -227,11 +227,12 @@ const styles = StyleSheet.create({
   },
   unverifiedBannerTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   unverifiedBannerText: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.onYellowContainer,
     marginTop: 2,
     lineHeight: 15,
@@ -258,12 +259,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   heroSubText: {
-    fontSize: 13,
+    fontSize: 12,
+    fontFamily: FontFamily.medium,
     color: 'rgba(255, 255, 255, 0.85)',
   },
   heroUserName: {
-    fontSize: 21,
-    fontWeight: '800',
+    fontSize: 20,
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
     marginTop: 2,
   },
@@ -276,8 +278,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   rtRwBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   statsRow: {
@@ -292,11 +294,12 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
   },
   statLabel: {
     fontSize: 11,
+    fontFamily: FontFamily.medium,
     color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 2,
   },
@@ -317,8 +320,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   shortcutText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
     flexShrink: 1,
   },
@@ -330,17 +333,18 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   sectionSubtitle: {
     fontSize: 11,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
   seeAllText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
 });

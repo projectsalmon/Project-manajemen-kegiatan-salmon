@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface VerificationModalProps {
@@ -206,13 +206,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.textNavyDark,
     textAlign: 'center',
     marginBottom: 6,
   },
   description: {
     fontSize: 13,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     textAlign: 'center',
     lineHeight: 18,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.textNavyDark,
     letterSpacing: 1.5,
   },
@@ -253,9 +254,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
+    fontFamily: FontFamily.semiBold,
     color: Colors.urgentRed,
     flex: 1,
-    fontWeight: '600',
   },
   askRtButton: {
     flexDirection: 'row',
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   },
   askRtButtonText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: '#128C7E',
     textDecorationLine: 'underline',
   },
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FontFamily.semiBold,
     color: Colors.textNavyMuted,
   },
   verifyBtn: {
@@ -298,8 +299,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   verifyBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
 });

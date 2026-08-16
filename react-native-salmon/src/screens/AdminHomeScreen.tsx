@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
-import { Colors } from '../constants/theme';
+import { Colors, FontFamily } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface AdminHomeScreenProps {
@@ -310,12 +310,12 @@ const styles = StyleSheet.create({
   },
   badgeLabelText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   heroUserName: {
-    fontSize: 21,
-    fontWeight: '800',
+    fontSize: 20,
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
   },
   statsRow: {
@@ -330,11 +330,12 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: FontFamily.headingExtraBold,
     color: Colors.white,
   },
   statLabel: {
     fontSize: 10,
+    fontFamily: FontFamily.medium,
     color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 2,
   },
@@ -352,8 +353,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryActionText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   secondaryActionButton: {
@@ -368,8 +369,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryActionText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
   pipelineSection: {
@@ -377,7 +378,7 @@ const styles = StyleSheet.create({
   },
   pipelineSectionTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
     marginBottom: 8,
   },
@@ -408,20 +409,22 @@ const styles = StyleSheet.create({
   },
   pipelineStatusBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   pipelineDateText: {
     fontSize: 11,
+    fontFamily: FontFamily.medium,
     color: Colors.textNavyMuted,
   },
   pipelineTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   pipelineAuthor: {
     fontSize: 12,
+    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     marginTop: 2,
     marginBottom: 10,
@@ -441,7 +444,7 @@ const styles = StyleSheet.create({
   },
   rejectButtonText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.urgentRed,
   },
   approveButton: {
@@ -455,7 +458,7 @@ const styles = StyleSheet.create({
   },
   approveButtonText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: Colors.onYellowContainer,
   },
   sectionHeader: {
@@ -466,12 +469,12 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FontFamily.headingBold,
     color: Colors.textNavyDark,
   },
   seeAllText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
     color: Colors.skyBlueHeader,
   },
 });
