@@ -169,13 +169,11 @@ class AuthManager(
         val builder = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
             .requestProfile()
-        if (serverClientId.isNotBlank() && !serverClientId.startsWith("123456")) {
-            try {
-                builder.requestIdToken(serverClientId)
-            } catch (e: Exception) {
-                Log.w(TAG, "requestIdToken skipped: ${e.localizedMessage}")
-            }
+
+        if (serverClientId.isNotBlank()) {
+            builder.requestIdToken(serverClientId)
         }
+
         return GoogleSignIn.getClient(activity, builder.build())
     }
 
