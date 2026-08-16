@@ -42,7 +42,7 @@ const ToastOverlay: React.FC = () => {
 };
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     OpenSans_400Regular,
     OpenSans_500Medium,
     OpenSans_600SemiBold,
@@ -54,7 +54,7 @@ export default function App() {
     PlusJakartaSans_800ExtraBold,
   });
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.skyBlueHeader} />
