@@ -6,7 +6,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CivicTopBar } from '../components/CivicTopBar';
-import { RoleSwitchSheet } from '../components/RoleSwitchSheet';
 import { Colors, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ActivityDetailScreen } from '../screens/ActivityDetailScreen';
@@ -37,8 +36,7 @@ const HomeScreenRouter: React.FC<{ navigation: any }> = ({ navigation }) => {
 };
 
 const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const { currentUser, switchRole } = useApp();
-  const [isRoleSheetVisible, setIsRoleSheetVisible] = useState(false);
+  const { currentUser } = useApp();
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom > 0 ? insets.bottom : 10;
 
@@ -50,7 +48,7 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
         currentRole={currentUser.role}
         roleTitle={roleMeta.title}
         userName={currentUser.name}
-        onRoleClick={() => setIsRoleSheetVisible(true)}
+        onRoleClick={() => navigation.navigate('ProfilTab')}
         onProfileClick={() => navigation.navigate('ProfilTab')}
       />
 
@@ -149,13 +147,6 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           }}
         />
       </Tab.Navigator>
-
-      <RoleSwitchSheet
-        visible={isRoleSheetVisible}
-        currentRole={currentUser.role}
-        onRoleSelected={(newRole) => switchRole(newRole)}
-        onDismiss={() => setIsRoleSheetVisible(false)}
-      />
     </View>
   );
 };

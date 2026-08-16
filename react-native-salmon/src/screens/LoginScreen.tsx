@@ -12,9 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { Colors, UserRolesMeta } from '../constants/theme';
+import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { UserRoleType } from '../types';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -25,12 +24,8 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const { loginWithGoogleProfile, switchRole, showToast } = useApp();
+  const { loginWithGoogleProfile, showToast } = useApp();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDemoRole, setSelectedDemoRole] = useState<UserRoleType>('WARGA');
-  const [showDemoRoles, setShowDemoRoles] = useState(false);
-
-  const roles: UserRoleType[] = ['WARGA', 'RT', 'RW', 'POSYANDU', 'STAF_KELURAHAN'];
 
   // Google OAuth configuration
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -100,8 +95,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleDemoLogin = (role: UserRoleType) => {
-    switchRole(role);
+  const handleDirectEnter = () => {
     navigation.reset({
       index: 0,
       routes: [{ name: 'MainTabs' }],
@@ -116,7 +110,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       >
         {/* App Logo */}
         <View style={styles.logoCircle}>
-          <MaterialCommunityIcons name="city-variant" size={44} color={Colors.white} />
+          <MaterialCommunityIcons name="city-variant" size={46} color={Colors.white} />
         </View>
 
         {/* Title & Subtitle */}
@@ -143,65 +137,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
-          {/* Toggle Demo Options */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>atau</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Direct Entry Button */}
           <TouchableOpacity
-            style={styles.demoToggleBtn}
-            onPress={() => setShowDemoRoles(!showDemoRoles)}
+            style={styles.directEnterButton}
+            activeOpacity={0.85}
+            onPress={handleDirectEnter}
           >
-            <MaterialCommunityIcons
-              name={showDemoRoles ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={Colors.textNavySecondary}
-            />
-            <Text style={styles.demoToggleText}>
-              {showDemoRoles ? 'Sembunyikan Opsi Demo' : 'Opsi Demo Cepat (Tanpa Login)'}
-            </Text>
+            <MaterialCommunityIcons name="arrow-right-circle-outline" size={22} color={Colors.onYellowContainer} />
+            <Text style={styles.directEnterButtonText}>Masuk Langsung ke Beranda</Text>
           </TouchableOpacity>
-
-          {/* Role Cards (Demo/Offline Mode) */}
-          {showDemoRoles && (
-            <View style={{ width: '100%', marginTop: 12 }}>
-              <Text style={styles.demoSectionTitle}>Pilih Peran Uji Coba:</Text>
-              {roles.map((roleKey) => {
-                const role = UserRolesMeta[roleKey];
-                const isSelected = roleKey === selectedDemoRole;
-
-                return (
-                  <TouchableOpacity
-                    key={roleKey}
-                    style={[
-                      styles.roleCard,
-                      isSelected && styles.roleCardSelected,
-                    ]}
-                    activeOpacity={0.85}
-                    onPress={() => {
-                      setSelectedDemoRole(roleKey);
-                      handleDemoLogin(roleKey);
-                    }}
-                  >
-                    <View style={styles.radioContainer}>
-                      <View
-                        style={[
-                          styles.radioOuter,
-                          isSelected && { borderColor: Colors.yellowHighlight },
-                        ]}
-                      >
-                        {isSelected && <View style={styles.radioInner} />}
-                      </View>
-                    </View>
-
-                    <View style={styles.roleDetails}>
-                      <Text style={styles.roleTitle}>{role.title}</Text>
-                      <Text style={[styles.roleSubtitle, { color: role.badgeColor }]}>
-                        {role.subtitle}
-                      </Text>
-                      <Text style={styles.roleDesc}>{role.description}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
         </View>
 
         <Text style={styles.versionText}>
@@ -224,9 +174,9 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   logoCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: Colors.skyBlueHeader,
     alignItems: 'center',
     justifyContent: 'center',
@@ -255,9 +205,9 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: Colors.white,
     borderRadius: 24,
-    padding: 20,
+    padding: 22,
     alignItems: 'center',
-    elevation: 2,
+    elevation: 3,
     shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -290,78 +240,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
   },
-  demoToggleBtn: {
+  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    gap: 4,
-    marginTop: 8,
-  },
-  demoToggleText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textNavySecondary,
-  },
-  demoSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  roleCard: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.skyBlueSurfaceVariant,
+  },
+  dividerText: {
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: Colors.textNavyMuted,
+    fontWeight: '600',
+  },
+  directEnterButton: {
+    width: '100%',
+    height: 52,
+    backgroundColor: Colors.yellowContainer,
     borderRadius: 16,
-    padding: 12,
-    marginVertical: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.yellowBorderLis,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-  },
-  roleCardSelected: {
-    borderColor: Colors.yellowHighlight,
-    borderWidth: 2,
-    backgroundColor: Colors.white,
-  },
-  radioContainer: {
-    marginRight: 10,
-    marginTop: 2,
-  },
-  radioOuter: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Colors.textNavyMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
   },
-  radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.yellowHighlight,
-  },
-  roleDetails: {
-    flex: 1,
-  },
-  roleTitle: {
-    fontSize: 14,
+  directEnterButtonText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: Colors.textNavyDark,
-  },
-  roleSubtitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  roleDesc: {
-    fontSize: 11,
-    color: Colors.textNavySecondary,
-    marginTop: 2,
-    lineHeight: 15,
+    color: Colors.onYellowContainer,
   },
   versionText: {
     fontSize: 12,

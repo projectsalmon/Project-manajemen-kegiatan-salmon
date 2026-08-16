@@ -13,6 +13,8 @@ export interface UserProfile {
   name: string;
   nik: string;
   role: UserRoleType;
+  age?: string | number;
+  address?: string;
   rt: string;
   rw: string;
   kelurahan: string;

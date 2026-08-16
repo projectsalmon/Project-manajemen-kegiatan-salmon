@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   Linking,
   Modal,
@@ -11,8 +12,8 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { RoleSwitchSheet } from '../components/RoleSwitchSheet';
-import { Colors, RsvpStatusMeta } from '../constants/theme';
+import * as ImagePicker from 'expo-image-picker';
+import { Colors, RsvpStatusMeta, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ContactItem, UserRoleType } from '../types';
 
@@ -25,22 +26,35 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     currentUser,
     activities,
     contacts,
-    switchRole,
+    updateProfile,
     addContact,
     updateContact,
     deleteContact,
     showToast,
   } = useApp();
 
-  const [isRoleSheetVisible, setIsRoleSheetVisible] = useState(false);
+  // Edit Profile Modal State
+  const [isEditProfileModalVisible, setIsEditProfileModalVisible] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editNik, setEditNik] = useState('');
+  const [editAge, setEditAge] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editRole, setEditRole] = useState<UserRoleType>('WARGA');
+  const [editKelurahan, setEditKelurahan] = useState('');
+  const [editRw, setEditRw] = useState('');
+  const [editRt, setEditRt] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+
+  // Contact Modal State
   const [isContactModalVisible, setIsContactModalVisible] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactItem | null>(null);
-
-  // Contact form state
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactCategory, setContactCategory] = useState('Kantor Kelurahan Sukamaju');
 
+  const availableRoles: UserRoleType[] = ['WARGA', 'RT', 'RW', 'POSYANDU', 'STAF_KELURAHAN'];
   const isAdmin = currentUser.role !== 'WARGA';
 
   // Filter activities with RSVP response
@@ -53,6 +67,74 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     return acc;
   }, {} as Record<string, ContactItem[]>);
 
+  // Open Edit Profile
+  const handleOpenEditProfile = () => {
+    setEditName(currentUser.name || '');
+    setEditNik(currentUser.nik || '');
+    setEditAge(currentUser.age ? String(currentUser.age) : '');
+    setEditAddress(currentUser.address || '');
+    setEditRole(currentUser.role || 'WARGA');
+    setEditKelurahan(currentUser.kelurahan || 'Sukamaju');
+    setEditRw(currentUser.rw || '05');
+    setEditRt(currentUser.rt || '03');
+    setEditPhone(currentUser.phone || '');
+    setEditEmail(currentUser.email || '');
+    setEditAvatarUrl(currentUser.avatarUrl || '');
+    setIsEditProfileModalVisible(true);
+  };
+
+  // Pick Photo for Avatar
+  const handlePickAvatar = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Izin Diperlukan',
+          'Aplikasi membutuhkan izin galeri untuk memilih foto profil.'
+        );
+        return;
+      }
+
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!pickerResult.canceled && pickerResult.assets.length > 0) {
+        setEditAvatarUrl(pickerResult.assets[0].uri);
+      }
+    } catch (error) {
+      showToast('Gagal memilih foto dari galeri');
+    }
+  };
+
+  // Save Profile Changes
+  const handleSaveProfile = () => {
+    if (!editName.trim()) {
+      showToast('Nama lengkap tidak boleh kosong!');
+      return;
+    }
+
+    updateProfile({
+      name: editName.trim(),
+      nik: editNik.trim(),
+      age: editAge.trim() ? editAge.trim() : undefined,
+      address: editAddress.trim() ? editAddress.trim() : undefined,
+      role: editRole,
+      kelurahan: editKelurahan.trim(),
+      rw: editRw.trim(),
+      rt: editRt.trim(),
+      phone: editPhone.trim(),
+      email: editEmail.trim(),
+      avatarUrl: editAvatarUrl.trim() || undefined,
+    });
+
+    setIsEditProfileModalVisible(false);
+  };
+
+  // Contact modal handlers
   const handleOpenAddContact = () => {
     setEditingContact(null);
     setContactName('');
@@ -113,6 +195,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     });
   };
 
+  const currentRoleMeta = UserRolesMeta[currentUser.role] || UserRolesMeta.WARGA;
+
   return (
     <ScrollView
       style={styles.container}
@@ -135,52 +219,107 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </View>
 
         <Text style={styles.profileName}>{currentUser.name}</Text>
-        <Text style={styles.profileNik}>NIK: {currentUser.nik}</Text>
+        <Text style={styles.profileNik}>NIK: {currentUser.nik || 'Belum diisi'}</Text>
 
-        <TouchableOpacity
-          style={styles.roleBadgePill}
-          activeOpacity={0.8}
-          onPress={() => setIsRoleSheetVisible(true)}
-        >
-          <View style={styles.rolePillDot} />
-          <Text style={styles.roleBadgePillText}>
-            Peran: {currentUser.role}
-          </Text>
-          <MaterialCommunityIcons
-            name="swap-horizontal"
-            size={18}
-            color={Colors.onYellowContainer}
+        <View style={styles.roleBadgePill}>
+          <View
+            style={[
+              styles.rolePillDot,
+              { backgroundColor: currentRoleMeta.badgeColor },
+            ]}
           />
+          <Text style={styles.roleBadgePillText}>
+            Peran: {currentRoleMeta.title}
+          </Text>
+        </View>
+
+        {/* Tombol Edit Profil */}
+        <TouchableOpacity
+          style={styles.editProfileBtn}
+          activeOpacity={0.85}
+          onPress={handleOpenEditProfile}
+        >
+          <MaterialCommunityIcons
+            name="account-edit-outline"
+            size={18}
+            color={Colors.skyBlueHeader}
+          />
+          <Text style={styles.editProfileBtnText}>Edit Profil & Peran</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 2. RESIDENT / DOMICILE INFO */}
+      {/* 2. RESIDENT & PERSONAL DATA INFO CARD */}
       <View style={styles.infoCard}>
-        <Text style={styles.cardHeaderTitle}>Informasi Domisili & Warga</Text>
+        <View style={styles.infoCardHeaderRow}>
+          <Text style={styles.cardHeaderTitle}>Informasi Pribadi & Domisili</Text>
+          <TouchableOpacity
+            style={styles.headerEditLink}
+            onPress={handleOpenEditProfile}
+          >
+            <MaterialCommunityIcons
+              name="pencil-outline"
+              size={16}
+              color={Colors.skyBlueHeader}
+            />
+            <Text style={styles.headerEditLinkText}>Ubah</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Nama Lengkap</Text>
+          <Text style={styles.infoValue}>{currentUser.name}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>NIK</Text>
+          <Text style={styles.infoValue}>{currentUser.nik || '-'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Usia / Umur</Text>
+          <Text style={styles.infoValue}>
+            {currentUser.age ? `${currentUser.age} Tahun` : 'Belum diisi'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Alamat Domisili</Text>
+          <Text style={[styles.infoValue, { flex: 1, textAlign: 'right' }]}>
+            {currentUser.address || 'Belum diisi'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Peran Akun</Text>
+          <Text style={[styles.infoValue, { color: currentRoleMeta.badgeColor }]}>
+            {currentRoleMeta.title} ({currentUser.role})
+          </Text>
+        </View>
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Kelurahan</Text>
           <Text style={styles.infoValue}>{currentUser.kelurahan}</Text>
         </View>
+
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>RW</Text>
-          <Text style={styles.infoValue}>{currentUser.rw}</Text>
+          <Text style={styles.infoLabel}>RW / RT</Text>
+          <Text style={styles.infoValue}>
+            RW {currentUser.rw} / RT {currentUser.rt}
+          </Text>
         </View>
+
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>RT</Text>
-          <Text style={styles.infoValue}>{currentUser.rt}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>No. HP / WhatsApp</Text>
+          <Text style={styles.infoLabel}>No. HP / WA</Text>
           <Text style={styles.infoValue}>{currentUser.phone}</Text>
         </View>
+
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Email</Text>
-          <Text style={styles.infoValue}>{currentUser.email}</Text>
+          <Text style={styles.infoValue}>{currentUser.email || '-'}</Text>
         </View>
       </View>
 
-      {/* 3. SECTION: RIWAYAT RSVP SAYA */}
+      {/* 3. RIWAYAT RSVP SAYA */}
       <View style={styles.rsvpCard}>
         <View style={styles.cardHeaderRow}>
           <View style={styles.headerLeftWithIcon}>
@@ -259,7 +398,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         )}
       </View>
 
-      {/* 4. SECTION: KONTAK PENTING WILAYAH */}
+      {/* 4. KONTAK PENTING WILAYAH */}
       <View style={styles.contactsCard}>
         <View style={styles.cardHeaderRow}>
           <View style={styles.headerLeftWithIcon}>
@@ -340,22 +479,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         ))}
       </View>
 
-      {/* 5. GANTI PERAN & LOGOUT */}
-      <TouchableOpacity
-        style={styles.switchRoleOutlineBtn}
-        activeOpacity={0.85}
-        onPress={() => setIsRoleSheetVisible(true)}
-      >
-        <MaterialCommunityIcons
-          name="swap-vertical"
-          size={20}
-          color={Colors.skyBlueHeader}
-        />
-        <Text style={styles.switchRoleOutlineBtnText}>
-          Ganti Peran Pengguna (Demo Role Switch)
-        </Text>
-      </TouchableOpacity>
-
+      {/* 5. LOGOUT BUTTON */}
       <TouchableOpacity
         style={styles.logoutBtn}
         activeOpacity={0.85}
@@ -365,15 +489,252 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <Text style={styles.logoutBtnText}>Keluar dari Aplikasi</Text>
       </TouchableOpacity>
 
-      {/* Role Switch Bottom Sheet */}
-      <RoleSwitchSheet
-        visible={isRoleSheetVisible}
-        currentRole={currentUser.role}
-        onRoleSelected={(newRole) => switchRole(newRole)}
-        onDismiss={() => setIsRoleSheetVisible(false)}
-      />
+      {/* MODAL: EDIT PROFIL LENGKAP */}
+      <Modal
+        visible={isEditProfileModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsEditProfileModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.editProfileModalContainer}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalHeaderTitle}>Edit Profil Pengguna</Text>
+              <TouchableOpacity
+                onPress={() => setIsEditProfileModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={Colors.textNavyDark}
+                />
+              </TouchableOpacity>
+            </View>
 
-      {/* Add / Edit Contact Modal */}
+            <ScrollView
+              style={styles.modalScrollArea}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Avatar Selector */}
+              <View style={styles.avatarEditContainer}>
+                <TouchableOpacity
+                  style={styles.avatarEditCircle}
+                  activeOpacity={0.8}
+                  onPress={handlePickAvatar}
+                >
+                  {editAvatarUrl ? (
+                    <Image
+                      source={{ uri: editAvatarUrl }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.avatarLetter}>
+                      {editName ? editName.charAt(0).toUpperCase() : 'U'}
+                    </Text>
+                  )}
+                  <View style={styles.avatarCameraBadge}>
+                    <MaterialCommunityIcons
+                      name="camera"
+                      size={14}
+                      color={Colors.white}
+                    />
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handlePickAvatar}>
+                  <Text style={styles.avatarChangeText}>Ubah Foto Profil</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Form: Nama Lengkap */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Nama Lengkap *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Masukkan nama lengkap"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editName}
+                  onChangeText={setEditName}
+                />
+              </View>
+
+              {/* Form: NIK */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Nomor Induk Kependudukan (NIK)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Contoh: 3271041208850003"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editNik}
+                  onChangeText={setEditNik}
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              {/* Form: Usia / Umur */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Usia / Umur (Tahun)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Contoh: 35"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editAge}
+                  onChangeText={setEditAge}
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              {/* Form: Alamat Domisili */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Alamat Domisili Lengkap</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea]}
+                  placeholder="Contoh: Jl. Merpati No. 12, Blok B"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editAddress}
+                  onChangeText={setEditAddress}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              {/* Form: Peran Pengguna / Jabatan */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Pilih Peran / Jabatan Akun *</Text>
+                <View style={styles.roleSelectionContainer}>
+                  {availableRoles.map((roleKey) => {
+                    const meta = UserRolesMeta[roleKey];
+                    const isSelected = editRole === roleKey;
+
+                    return (
+                      <TouchableOpacity
+                        key={roleKey}
+                        style={[
+                          styles.roleOptionCard,
+                          isSelected && {
+                            borderColor: meta.badgeColor,
+                            backgroundColor: `${meta.badgeColor}15`,
+                            borderWidth: 2,
+                          },
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={() => setEditRole(roleKey)}
+                      >
+                        <View
+                          style={[
+                            styles.roleOptionDot,
+                            { backgroundColor: meta.badgeColor },
+                          ]}
+                        />
+                        <View style={styles.roleOptionInfo}>
+                          <Text style={styles.roleOptionTitle}>{meta.title}</Text>
+                          <Text style={styles.roleOptionSubtitle}>
+                            {meta.subtitle}
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <MaterialCommunityIcons
+                            name="check-circle"
+                            size={20}
+                            color={meta.badgeColor}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Form: Wilayah RT & RW */}
+              <View style={styles.formRow}>
+                <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.formLabel}>RT</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="03"
+                    placeholderTextColor={Colors.textNavyMuted}
+                    value={editRt}
+                    onChangeText={setEditRt}
+                  />
+                </View>
+
+                <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.formLabel}>RW</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="05"
+                    placeholderTextColor={Colors.textNavyMuted}
+                    value={editRw}
+                    onChangeText={setEditRw}
+                  />
+                </View>
+              </View>
+
+              {/* Form: Kelurahan */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Kelurahan</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Sukamaju"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editKelurahan}
+                  onChangeText={setEditKelurahan}
+                />
+              </View>
+
+              {/* Form: No. HP / WhatsApp */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Nomor HP / WhatsApp *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="0812-3456-7890"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              {/* Form: Email */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Alamat Email</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="nama@email.com"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooterActions}>
+              <TouchableOpacity
+                style={styles.cancelModalBtn}
+                onPress={() => setIsEditProfileModalVisible(false)}
+              >
+                <Text style={styles.cancelModalBtnText}>Batal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.saveModalBtn}
+                onPress={handleSaveProfile}
+              >
+                <MaterialCommunityIcons
+                  name="content-save-check"
+                  size={18}
+                  color={Colors.onYellowContainer}
+                />
+                <Text style={styles.saveModalBtnText}>Simpan Perubahan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: ADD / EDIT KONTAK */}
       <Modal
         visible={isContactModalVisible}
         transparent
@@ -386,10 +747,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               {editingContact ? 'Edit Kontak Penting' : 'Tambah Kontak Penting'}
             </Text>
 
-            <View style={styles.contactField}>
-              <Text style={styles.contactLabel}>Nama Kontak & Jabatan *</Text>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Nama Kontak & Jabatan *</Text>
               <TextInput
-                style={styles.contactInput}
+                style={styles.formInput}
                 placeholder="Contoh: Bpk. Sutrisno (Ketua RW 05)"
                 placeholderTextColor={Colors.textNavyMuted}
                 value={contactName}
@@ -397,10 +758,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               />
             </View>
 
-            <View style={styles.contactField}>
-              <Text style={styles.contactLabel}>Nomor Telepon / WhatsApp *</Text>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Nomor Telepon / WhatsApp *</Text>
               <TextInput
-                style={styles.contactInput}
+                style={styles.formInput}
                 placeholder="0812-3456-7890"
                 placeholderTextColor={Colors.textNavyMuted}
                 value={contactPhone}
@@ -409,10 +770,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               />
             </View>
 
-            <View style={styles.contactField}>
-              <Text style={styles.contactLabel}>Kategori Wilayah / Jabatan</Text>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Kategori Wilayah / Jabatan</Text>
               <TextInput
-                style={styles.contactInput}
+                style={styles.formInput}
                 placeholder="Pengurus RT / RW, Kader Posyandu, dll"
                 placeholderTextColor={Colors.textNavyMuted}
                 value={contactCategory}
@@ -438,17 +799,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               )}
 
               <TouchableOpacity
-                style={styles.cancelContactBtn}
+                style={styles.cancelModalBtn}
                 onPress={() => setIsContactModalVisible(false)}
               >
-                <Text style={styles.cancelContactBtnText}>Batal</Text>
+                <Text style={styles.cancelModalBtnText}>Batal</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.saveContactBtn}
+                style={styles.saveModalBtn}
                 onPress={handleSaveContact}
               >
-                <Text style={styles.saveContactBtnText}>
+                <Text style={styles.saveModalBtnText}>
                   {editingContact ? 'Simpan' : 'Tambah'}
                 </Text>
               </TouchableOpacity>
@@ -475,12 +836,16 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     alignItems: 'center',
-    elevation: 2,
+    elevation: 3,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -489,12 +854,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
   },
   avatarLetter: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800',
     color: Colors.skyBlueHeader,
   },
@@ -507,26 +872,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.85)',
     marginTop: 2,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   roleBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.yellowContainer,
-    borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
+    backgroundColor: Colors.white,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
+    marginBottom: 12,
   },
   rolePillDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.onYellowContainer,
   },
   roleBadgePillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.yellowContainer,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 14,
+    gap: 6,
+  },
+  editProfileBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.onYellowContainer,
@@ -538,24 +917,47 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.skyBlueSurfaceVariant,
   },
+  infoCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   cardHeaderTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: Colors.textNavyDark,
   },
+  headerEditLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  headerEditLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    alignItems: 'flex-start',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   infoLabel: {
     fontSize: 12,
     color: Colors.textNavyMuted,
+    width: 110,
   },
   infoValue: {
     fontSize: 12,
     fontWeight: '700',
     color: Colors.textNavyDark,
+    textAlign: 'right',
   },
   rsvpCard: {
     backgroundColor: Colors.white,
@@ -705,22 +1107,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  switchRoleOutlineBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.skyBlueHeader,
-    borderRadius: 14,
-    height: 48,
-    gap: 8,
-  },
-  switchRoleOutlineBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.skyBlueHeader,
-  },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -738,9 +1124,162 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
+    padding: 16,
+  },
+  editProfileModalContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    maxHeight: '90%',
     padding: 20,
+    elevation: 5,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    marginBottom: 12,
+  },
+  modalHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textNavyDark,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalScrollArea: {
+    maxHeight: 450,
+  },
+  avatarEditContainer: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  avatarEditCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.skyBlueSurfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'visible',
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.skyBlueHeader,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  avatarChangeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+    marginTop: 6,
+  },
+  formGroup: {
+    marginBottom: 12,
+  },
+  formRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  formLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+    marginBottom: 5,
+  },
+  formInput: {
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 13,
+    color: Colors.textNavyDark,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  formTextArea: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  roleSelectionContainer: {
+    gap: 6,
+    marginTop: 4,
+  },
+  roleOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: 10,
+  },
+  roleOptionDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  roleOptionInfo: {
+    flex: 1,
+  },
+  roleOptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  roleOptionSubtitle: {
+    fontSize: 11,
+    color: Colors.textNavySecondary,
+  },
+  modalFooterActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    marginTop: 8,
+  },
+  cancelModalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  cancelModalBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textNavySecondary,
+  },
+  saveModalBtn: {
+    backgroundColor: Colors.yellowContainer,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  saveModalBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onYellowContainer,
   },
   contactModalContainer: {
     backgroundColor: Colors.white,
@@ -753,25 +1292,6 @@ const styles = StyleSheet.create({
     color: Colors.textNavyDark,
     marginBottom: 14,
   },
-  contactField: {
-    marginBottom: 12,
-  },
-  contactLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.skyBlueHeader,
-    marginBottom: 4,
-  },
-  contactInput: {
-    backgroundColor: Colors.skyBlueBackground,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: Colors.textNavyDark,
-    borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-  },
   contactModalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -782,25 +1302,5 @@ const styles = StyleSheet.create({
   deleteContactBtn: {
     marginRight: 'auto',
     padding: 6,
-  },
-  cancelContactBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  cancelContactBtnText: {
-    fontSize: 13,
-    color: Colors.textNavySecondary,
-    fontWeight: '600',
-  },
-  saveContactBtn: {
-    backgroundColor: Colors.yellowHighlight,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  saveContactBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.onYellowContainer,
   },
 });

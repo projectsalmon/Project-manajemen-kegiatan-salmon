@@ -5,6 +5,8 @@ export const defaultUserProfile: UserProfile = {
   name: 'Budi Santoso',
   nik: '3271041208850003',
   role: 'WARGA',
+  age: '35',
+  address: 'Jl. Merpati No. 12, RT 03 / RW 05',
   rt: '03',
   rw: '05',
   kelurahan: 'Sukamaju',

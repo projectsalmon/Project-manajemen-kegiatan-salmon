@@ -40,6 +40,7 @@ interface AppContextType {
   showToast: (msg: string) => void;
   clearToast: () => void;
   switchRole: (newRole: UserRoleType) => void;
+  updateProfile: (updatedData: Partial<UserProfile>) => void;
   loginWithGoogleProfile: (profile: { email: string; name: string; photoUrl?: string }) => void;
   updateRsvpStatus: (activityId: string, newStatus: RsvpStatusType) => void;
   addActivity: (params: {
@@ -181,24 +182,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const switchRole = (newRole: UserRoleType) => {
-    const roleNames: Record<UserRoleType, string> = {
-      WARGA: 'Budi Santoso',
-      RT: 'Bambang Wijaya (Ketua RT 03)',
-      RW: 'Sutrisno (Ketua RW 05)',
-      POSYANDU: 'Ibu Ningsih (Kader Posyandu)',
-      STAF_KELURAHAN: 'Hendra Pratama (Staf Kesra)',
-    };
+  const updateProfile = (updatedData: Partial<UserProfile>) => {
+    setCurrentUser((prev) => {
+      const updated: UserProfile = {
+        ...prev,
+        ...updatedData,
+      };
+      persistProfile(updated);
+      return updated;
+    });
+    showToast('Profil berhasil disimpan!');
+  };
 
+  const switchRole = (newRole: UserRoleType) => {
     const updatedProfile: UserProfile = {
       ...currentUser,
       role: newRole,
-      name: roleNames[newRole],
     };
 
     setCurrentUser(updatedProfile);
     persistProfile(updatedProfile);
-    showToast(`Beralih ke peran: ${newRole}`);
+    showToast(`Peran diubah: ${newRole}`);
   };
 
   const loginWithGoogleProfile = (profile: { email: string; name: string; photoUrl?: string }) => {
@@ -625,6 +629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast,
         clearToast,
         switchRole,
+        updateProfile,
         loginWithGoogleProfile,
         updateRsvpStatus,
         addActivity,
