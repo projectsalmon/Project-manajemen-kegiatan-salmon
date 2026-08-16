@@ -88,10 +88,10 @@ class AuthManager(
                 val firebaseUid = try {
                     val authCredential = GoogleAuthProvider.getCredential(idToken, null)
                     val authResult = firebaseAuth.signInWithCredential(authCredential).await()
-                    authResult.user?.uid ?: "USR-${email.hashCode()}"
+                    authResult.user?.uid ?: return AuthResult.Error("Gagal mendapatkan UID dari Firebase.")
                 } catch (e: Exception) {
-                    Log.w(TAG, "Firebase Auth sign-in with token error (fallback to direct credential): ${e.localizedMessage}")
-                    "USR-${Math.abs(email.hashCode())}"
+                    Log.w(TAG, "Firebase Auth sign-in with token error: ${e.localizedMessage}")
+                    return AuthResult.Error("Gagal masuk dengan Firebase: ${e.localizedMessage}")
                 }
 
                 // Otomatisasi Role Pengguna:
@@ -192,13 +192,13 @@ class AuthManager(
             if (!idToken.isNullOrEmpty()) {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
                 val authResult = firebaseAuth.signInWithCredential(credential).await()
-                authResult.user?.uid ?: "USR-${email.hashCode()}"
+                authResult.user?.uid ?: return AuthResult.Error("Gagal mendapatkan UID dari Firebase.")
             } else {
-                "USR-${Math.abs(email.hashCode())}"
+                return AuthResult.Error("ID Token dari Google tidak ditemukan.")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Firebase Auth error: ${e.localizedMessage}")
-            "USR-${Math.abs(email.hashCode())}"
+            return AuthResult.Error("Gagal masuk dengan Firebase: ${e.localizedMessage}")
         }
 
         // Cek apakah akun ini sudah memiliki role yang ditentukan oleh Admin di Firestore
@@ -326,7 +326,8 @@ class AuthManager(
                     role = role
                 )
             }
-            return cachedProfile
+            sessionManager.clearSession()
+            return null
         }
         return null
     }

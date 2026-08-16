@@ -56,33 +56,18 @@ fun LoginScreen(
                 if (account != null && !account.email.isNullOrEmpty()) {
                     viewModel.handleGoogleAccountResult(account, onLoginSuccess)
                 } else {
-                    val last = GoogleSignIn.getLastSignedInAccount(context)
-                    if (last != null && !last.email.isNullOrEmpty()) {
-                        viewModel.handleGoogleAccountResult(last, onLoginSuccess)
-                    } else {
-                        viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
-                    }
+                    viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
                 }
             } catch (e: Exception) {
-                val last = GoogleSignIn.getLastSignedInAccount(context)
-                if (last != null && !last.email.isNullOrEmpty()) {
-                    viewModel.handleGoogleAccountResult(last, onLoginSuccess)
+                // Check if cancelled (e.g. status code 12501)
+                if (e is ApiException && (e.statusCode == 12501 || e.statusCode == 16)) {
+                    viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
                 } else {
-                    // Check if cancelled (e.g. status code 12501)
-                    if (e is ApiException && (e.statusCode == 12501 || e.statusCode == 16)) {
-                        viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
-                    } else {
-                        viewModel.setAuthError("Gagal menghubungkan ke layanan Google (${e.localizedMessage ?: "Koneksi terputus"}). Pastikan perangkat terhubung ke internet dan coba kembali.")
-                    }
+                    viewModel.setAuthError("Gagal menghubungkan ke layanan Google (${e.localizedMessage ?: "Koneksi terputus"}). Pastikan perangkat terhubung ke internet dan coba kembali.")
                 }
             }
         } else {
-            val last = GoogleSignIn.getLastSignedInAccount(context)
-            if (last != null && !last.email.isNullOrEmpty()) {
-                viewModel.handleGoogleAccountResult(last, onLoginSuccess)
-            } else {
-                viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
-            }
+            viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
         }
     }
 
@@ -229,7 +214,7 @@ fun LoginScreen(
                         if (activity != null) {
                             viewModel.clearAuthError()
                             try {
-                                val client = viewModel.authManager.getStandardGoogleSignInClient(activity)
+                                val client = viewModel.authManager.getGoogleSignInClient(activity, webClientId)
                                 client.signOut().addOnCompleteListener {
                                     googleSignInLauncher.launch(client.signInIntent)
                                 }

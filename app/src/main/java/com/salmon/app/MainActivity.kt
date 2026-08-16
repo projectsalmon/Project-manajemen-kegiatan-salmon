@@ -28,6 +28,7 @@ import com.salmon.app.ui.components.RoleSwitchSheet
 import com.salmon.app.ui.screens.*
 import com.salmon.app.ui.theme.*
 import com.salmon.app.viewmodel.AppViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,6 +122,18 @@ fun MainApp(appViewModel: AppViewModel) {
 
             // 2. Beranda (Role-Tailored Dashboards: Warga, Posyandu, or Admin)
             composable("beranda") {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                if (firebaseUser == null) {
+                    LaunchedEffect(Unit) {
+                        appViewModel.signOut {
+                            navController.navigate("login") {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
+                    return@composable
+                }
+
                 when (appViewModel.currentUser.role) {
                     UserRole.WARGA -> {
                         WargaHomeScreen(
