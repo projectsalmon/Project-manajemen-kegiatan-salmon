@@ -7,6 +7,7 @@ import {
   AnnouncementUrgencyType,
   ApprovalStatusType,
   ContactItem,
+  LocationPresetItem,
   RegionInvitationCode,
   RsvpStatusType,
   UserProfile,
@@ -14,6 +15,7 @@ import {
 } from '../types';
 import {
   defaultContacts,
+  defaultLocationPresets,
   defaultRegionCodes,
   defaultUserProfile,
   sampleActivities,
@@ -26,6 +28,7 @@ const STORAGE_KEYS = {
   CONTACTS: '@salmon_contacts_v2',
   REGION_CODES: '@salmon_region_codes_v2',
   USER_PROFILE: '@salmon_profile_v2',
+  LOCATION_PRESETS: '@salmon_locations_v2',
 };
 
 interface AppContextType {
@@ -34,6 +37,7 @@ interface AppContextType {
   announcements: AnnouncementItem[];
   contacts: ContactItem[];
   regionCodes: RegionInvitationCode[];
+  locationPresets: LocationPresetItem[];
   selectedCategoryFilter: ActivityCategoryType | null;
   setSelectedCategoryFilter: (cat: ActivityCategoryType | null) => void;
   selectedRegionFilter: string;
@@ -57,10 +61,14 @@ interface AppContextType {
   verifyUserWithCode: (inputCode: string) => { success: boolean; message: string };
   removeVerification: () => void;
   updateRsvpStatus: (activityId: string, newStatus: RsvpStatusType) => void;
+  addLocationPreset: (name: string, address: string) => void;
+  updateLocationPreset: (id: string, name: string, address: string) => void;
+  deleteLocationPreset: (id: string) => void;
   addActivity: (params: {
     title: string;
     description: string;
     category: ActivityCategoryType;
+    customCategoryName?: string;
     dateIso: string;
     formattedDate: string;
     timeSlot: string;
@@ -76,6 +84,7 @@ interface AppContextType {
       title: string;
       description: string;
       category: ActivityCategoryType;
+      customCategoryName?: string;
       dateIso: string;
       formattedDate: string;
       timeSlot: string;
@@ -131,6 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>(sampleAnnouncements);
   const [contacts, setContacts] = useState<ContactItem[]>(defaultContacts);
   const [regionCodes, setRegionCodes] = useState<RegionInvitationCode[]>(defaultRegionCodes);
+  const [locationPresets, setLocationPresets] = useState<LocationPresetItem[]>(defaultLocationPresets);
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ActivityCategoryType | null>(
     null
@@ -157,6 +167,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const storedRegionCodes = await AsyncStorage.getItem(STORAGE_KEYS.REGION_CODES);
         if (storedRegionCodes) setRegionCodes(JSON.parse(storedRegionCodes));
+
+        const storedLocations = await AsyncStorage.getItem(STORAGE_KEYS.LOCATION_PRESETS);
+        if (storedLocations) setLocationPresets(JSON.parse(storedLocations));
       } catch (e) {
         console.warn('Gagal memuat data dari AsyncStorage:', e);
       }
@@ -209,6 +222,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await AsyncStorage.setItem(STORAGE_KEYS.REGION_CODES, JSON.stringify(items));
     } catch (e) {
       console.warn('Gagal menyimpan kode wilayah:', e);
+    }
+  };
+
+  const persistLocationPresets = async (items: LocationPresetItem[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.LOCATION_PRESETS, JSON.stringify(items));
+    } catch (e) {
+      console.warn('Gagal menyimpan rekomendasi lokasi:', e);
     }
   };
 
@@ -439,10 +460,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(msg);
   };
 
+  const addLocationPreset = (name: string, address: string) => {
+    const newLoc: LocationPresetItem = {
+      id: `LOC-${Date.now() % 10000}`,
+      name: name.trim(),
+      address: address.trim(),
+    };
+    setLocationPresets((prev) => {
+      const updated = [newLoc, ...prev];
+      persistLocationPresets(updated);
+      return updated;
+    });
+    showToast(`Rekomendasi tempat '${name}' berhasil ditambahkan!`);
+  };
+
+  const updateLocationPreset = (id: string, name: string, address: string) => {
+    setLocationPresets((prev) => {
+      const updated = prev.map((loc) =>
+        loc.id === id ? { ...loc, name: name.trim(), address: address.trim() } : loc
+      );
+      persistLocationPresets(updated);
+      return updated;
+    });
+    showToast('Rekomendasi tempat berhasil diperbarui.');
+  };
+
+  const deleteLocationPreset = (id: string) => {
+    setLocationPresets((prev) => {
+      const updated = prev.filter((loc) => loc.id !== id);
+      persistLocationPresets(updated);
+      return updated;
+    });
+    showToast('Rekomendasi tempat dihapus.');
+  };
+
   const addActivity = (params: {
     title: string;
     description: string;
     category: ActivityCategoryType;
+    customCategoryName?: string;
     dateIso: string;
     formattedDate: string;
     timeSlot: string;
@@ -471,6 +527,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: params.title,
       description: params.description,
       category: params.category,
+      customCategoryName: params.customCategoryName || undefined,
       dateIso: params.dateIso,
       formattedDate: params.formattedDate,
       timeSlot: params.timeSlot,
@@ -514,6 +571,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: string;
       description: string;
       category: ActivityCategoryType;
+      customCategoryName?: string;
       dateIso: string;
       formattedDate: string;
       timeSlot: string;
@@ -850,6 +908,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         verifyUserWithCode,
         removeVerification,
         updateRsvpStatus,
+        locationPresets,
+        addLocationPreset,
+        updateLocationPreset,
+        deleteLocationPreset,
         addActivity,
         updateActivity,
         rwApproveActivity,

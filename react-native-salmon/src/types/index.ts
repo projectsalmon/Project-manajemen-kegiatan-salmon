@@ -46,13 +46,20 @@ export type ActivityCategoryType =
   | 'RAPAT'
   | 'KESEHATAN'
   | 'SOSIAL'
-  | 'OLAH_RAGA';
+  | 'OLAH_RAGA'
+  | 'LAINNYA';
 
 export interface CategoryInfo {
   displayName: string;
   iconName: string;
   badgeColor: string;
   containerColor: string;
+}
+
+export interface LocationPresetItem {
+  id: string;
+  name: string;
+  address: string;
 }
 
 export type RsvpStatusType = 'ATTENDING' | 'NOT_ATTENDING' | 'MAYBE' | 'NONE';
@@ -75,6 +82,7 @@ export interface ActivityItem {
   title: string;
   description: string;
   category: ActivityCategoryType;
+  customCategoryName?: string;
   dateIso: string; // YYYY-MM-DD
   formattedDate: string; // e.g. "Minggu, 18 Mei 2025"
   timeSlot: string; // e.g. "08:00 - 11:30 WIB"

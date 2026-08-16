@@ -127,6 +127,12 @@ export const CategoryMeta: Record<ActivityCategoryType, CategoryInfo> = {
     badgeColor: Colors.yellowAccent,
     containerColor: Colors.yellowContainer,
   },
+  LAINNYA: {
+    displayName: 'Lain-lain (Kustom)',
+    iconName: 'dots-horizontal-circle-outline',
+    badgeColor: '#6366F1',
+    containerColor: '#EEF2FF',
+  },
 };
 
 export const ApprovalStatusMeta: Record<

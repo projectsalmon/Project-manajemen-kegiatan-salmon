@@ -1,4 +1,4 @@
-import { ActivityItem, AnnouncementItem, ContactItem, RegionInvitationCode, UserProfile } from '../types';
+import { ActivityItem, AnnouncementItem, ContactItem, LocationPresetItem, RegionInvitationCode, UserProfile } from '../types';
 
 export const defaultUserProfile: UserProfile = {
   id: 'USR-001',
@@ -17,6 +17,39 @@ export const defaultUserProfile: UserProfile = {
   verifiedCode: 'RT03MAJU',
   verifiedAt: '12 Mei 2025',
 };
+
+export const defaultLocationPresets: LocationPresetItem[] = [
+  {
+    id: 'LOC-1',
+    name: 'Balai Warga RT 03',
+    address: 'Jl. Mawar No. 12, RT 03 / RW 05',
+  },
+  {
+    id: 'LOC-2',
+    name: 'Lapangan Bulutangkis RT 03',
+    address: 'Jl. Merpati Blok B, RT 03 / RW 05',
+  },
+  {
+    id: 'LOC-3',
+    name: 'Posyandu Melati 03',
+    address: 'Balai Warga RT 03, Jl. Mawar No. 12',
+  },
+  {
+    id: 'LOC-4',
+    name: 'Aula Serbaguna Kelurahan Sukamaju',
+    address: 'Jl. Raya Sukamaju No. 45',
+  },
+  {
+    id: 'LOC-5',
+    name: 'Masjid Al-Ikhlas RW 05',
+    address: 'Jl. Kenanga No. 8, RW 05',
+  },
+  {
+    id: 'LOC-6',
+    name: 'Pos Ronda Utama RT 04',
+    address: 'Jl. Anggrek No. 01, RT 04 / RW 05',
+  },
+];
 
 export const defaultRegionCodes: RegionInvitationCode[] = [
   {

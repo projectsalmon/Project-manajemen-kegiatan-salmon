@@ -113,7 +113,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
               style={[styles.categoryTagText, { color: categoryInfo.badgeColor }]}
               numberOfLines={1}
             >
-              {categoryInfo.displayName}
+              {activity.customCategoryName || categoryInfo.displayName}
             </Text>
           </View>
 

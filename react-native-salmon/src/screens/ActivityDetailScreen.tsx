@@ -327,7 +327,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 ]}
               >
                 <Text style={styles.categoryTagOnHeroText}>
-                  {categoryInfo.displayName}
+                  {activity.customCategoryName || categoryInfo.displayName}
                 </Text>
               </View>
 
@@ -364,7 +364,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
               <Text
                 style={[styles.categoryTagText, { color: categoryInfo.badgeColor }]}
               >
-                {categoryInfo.displayName}
+                {activity.customCategoryName || categoryInfo.displayName}
               </Text>
             </View>
 
