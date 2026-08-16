@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "957812902323-0ecokmj8lt3cq1j1g4nu9a4gnphmua37.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.salmon.app",
+            "certificate_hash": "1089c07cfdd9eb02becf97344a61f224e6c1328b"
+          }
+        },
+        {
+          "client_id": "957812902323-pn0qsciutk1bmanhu0vutmeut1h9c5d8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.salmon.app",
+            "certificate_hash": "da2616c4ef608b00bd296d909dc9109719743b77"
+          }
+        },
+        {
           "client_id": "957812902323-sla7uv6hfrh0te1b3vre9jdu5nga452g.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -25,7 +41,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "957812902323-sla7uv6hfrh0te1b3vre9jdu5nga452g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
