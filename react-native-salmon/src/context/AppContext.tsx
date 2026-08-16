@@ -119,6 +119,8 @@ interface AppContextType {
   deleteContact: (contactId: string) => void;
   addDocumentationPhoto: (activityId: string, photoUrl: string) => void;
   deleteDocumentationPhoto: (activityId: string, photoUrl: string) => void;
+  addDocumentationVideo: (activityId: string, videoUrl: string) => void;
+  deleteDocumentationVideo: (activityId: string, videoUrl: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -639,6 +641,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Foto dokumentasi dihapus.');
   };
 
+  const addDocumentationVideo = (activityId: string, videoUrl: string) => {
+    setActivities((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== activityId) return item;
+        return {
+          ...item,
+          videos: [videoUrl, ...(item.videos || [])],
+        };
+      });
+      persistActivities(updated);
+      return updated;
+    });
+    showToast('Video dokumentasi kegiatan berhasil ditambahkan!');
+  };
+
+  const deleteDocumentationVideo = (activityId: string, videoUrl: string) => {
+    setActivities((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== activityId) return item;
+        return {
+          ...item,
+          videos: (item.videos || []).filter((v) => v !== videoUrl),
+        };
+      });
+      persistActivities(updated);
+      return updated;
+    });
+    showToast('Video dokumentasi dihapus.');
+  };
+
   const addAnnouncement = (params: {
     title: string;
     content: string;
@@ -834,6 +866,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteContact,
         addDocumentationPhoto,
         deleteDocumentationPhoto,
+        addDocumentationVideo,
+        deleteDocumentationVideo,
       }}
     >
       {children}

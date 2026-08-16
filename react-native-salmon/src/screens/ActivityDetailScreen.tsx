@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import {
   Alert,
   Image,
+  Linking,
   Modal,
   Platform,
   ScrollView,
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -15,19 +17,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { MapPreviewCard } from '../components/MapPreviewCard';
-import {
-  CategoryMeta,
-  Colors,
-  UserRolesMeta,
-} from '../constants/theme';
-import { useApp } from '../context/AppContext';
 import { VerificationModal } from '../components/VerificationModal';
+import { CategoryMeta, Colors, UserRolesMeta } from '../constants/theme';
+import { useApp } from '../context/AppContext';
 import { RsvpStatusType } from '../types';
 
 interface ActivityDetailScreenProps {
   route: any;
   navigation: any;
 }
+
+type MediaFilterType = 'ALL' | 'PHOTOS' | 'VIDEOS';
 
 export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   route,
@@ -40,11 +40,18 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     updateRsvpStatus,
     addDocumentationPhoto,
     deleteDocumentationPhoto,
+    addDocumentationVideo,
+    deleteDocumentationVideo,
     showToast,
   } = useApp();
 
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
-  const [isUploadPickerVisible, setIsUploadPickerVisible] = useState(false);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [isUploadPhotoPickerVisible, setIsUploadPhotoPickerVisible] = useState(false);
+  const [isUploadVideoModalVisible, setIsUploadVideoModalVisible] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [mediaFilter, setMediaFilter] = useState<MediaFilterType>('ALL');
+
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
   const [pendingRsvpStatus, setPendingRsvpStatus] = useState<RsvpStatusType | null>(null);
 
@@ -86,14 +93,15 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const organizerRoleInfo = UserRolesMeta[activity.organizerRole] || UserRolesMeta.WARGA;
   const isAdmin = currentUser.role !== 'WARGA';
 
-  // Default gallery photos + user uploaded photos
-  const defaultDocs = [
-    'https://images.pexels.com/photos/8460159/pexels-photo-8460159.jpeg?auto=compress&cs=tinysrgb&w=800',
-    'https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800',
-    'https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800',
-    'https://images.pexels.com/photos/7088530/pexels-photo-7088530.jpeg?auto=compress&cs=tinysrgb&w=800',
-  ];
-  const allPhotos = Array.from(new Set([...(activity.photos || []), ...defaultDocs]));
+  // Hero Thumbnail (paling atas)
+  const heroThumbnailUrl =
+    activity.imageUrl ||
+    (activity.photos && activity.photos.length > 0 ? activity.photos[0] : null);
+
+  // Photos & Videos
+  const photosList = activity.photos || [];
+  const videosList = activity.videos || [];
+  const totalMediaCount = photosList.length + videosList.length;
 
   const handleShare = async () => {
     try {
@@ -113,8 +121,9 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     }
   };
 
+  // Photo handlers
   const handlePickFromGallery = async () => {
-    setIsUploadPickerVisible(false);
+    setIsUploadPhotoPickerVisible(false);
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
@@ -138,7 +147,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   };
 
   const handleTakePhoto = async () => {
-    setIsUploadPickerVisible(false);
+    setIsUploadPhotoPickerVisible(false);
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
@@ -158,6 +167,87 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
       console.warn('Camera error:', e);
       showToast('Gagal membuka kamera HP.');
     }
+  };
+
+  const confirmDeletePhoto = (photoUrl: string) => {
+    Alert.alert(
+      'Hapus Foto Dokumentasi',
+      'Apakah Anda yakin ingin menghapus foto ini dari arsip kegiatan?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: () => {
+            deleteDocumentationPhoto(activity.id, photoUrl);
+            if (previewPhotoUrl === photoUrl) {
+              setPreviewPhotoUrl(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Video handlers
+  const handlePickVideoFromGallery = async () => {
+    setIsUploadVideoModalVisible(false);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showToast('Izin akses galeri diperlukan untuk memilih video.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        addDocumentationVideo(activity.id, result.assets[0].uri);
+      }
+    } catch (e) {
+      console.warn('Video picker error:', e);
+      showToast('Gagal memilih video dari galeri.');
+    }
+  };
+
+  const handleSaveVideoUrl = () => {
+    if (!videoUrlInput.trim()) {
+      showToast('Masukkan link URL video yang valid!');
+      return;
+    }
+    addDocumentationVideo(activity.id, videoUrlInput.trim());
+    setVideoUrlInput('');
+    setIsUploadVideoModalVisible(false);
+  };
+
+  const confirmDeleteVideo = (videoUrl: string) => {
+    Alert.alert(
+      'Hapus Video Dokumentasi',
+      'Apakah Anda yakin ingin menghapus video ini dari arsip kegiatan?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: () => {
+            deleteDocumentationVideo(activity.id, videoUrl);
+            if (previewVideoUrl === videoUrl) {
+              setPreviewVideoUrl(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handlePlayVideo = (videoUrl: string) => {
+    Linking.openURL(videoUrl).catch(() => {
+      showToast('Tidak dapat memutar video langsung dari URL ini.');
+    });
   };
 
   const currentRsvp = activity.userRsvpStatus;
@@ -218,27 +308,73 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Category Tag & Target Region */}
-        <View style={styles.categoryRegionRow}>
-          <View
-            style={[
-              styles.categoryTag,
-              { backgroundColor: categoryInfo.containerColor },
-            ]}
+        {/* HERO THUMBNAIL POSTER DI PALING ATAS */}
+        {heroThumbnailUrl ? (
+          <TouchableOpacity
+            style={styles.heroThumbnailCard}
+            activeOpacity={0.9}
+            onPress={() => setPreviewPhotoUrl(heroThumbnailUrl)}
           >
-            <Text
-              style={[styles.categoryTagText, { color: categoryInfo.badgeColor }]}
-            >
-              {categoryInfo.displayName}
-            </Text>
-          </View>
+            <Image source={{ uri: heroThumbnailUrl }} style={styles.heroThumbnailImage} />
+            <View style={styles.heroThumbnailGradientOverlay} />
 
-          <View style={styles.targetRegionTag}>
-            <Text style={styles.targetRegionTagText}>
-              Wilayah: {activity.targetRegion}
-            </Text>
+            {/* Badges on top of thumbnail */}
+            <View style={styles.heroThumbnailTopRow}>
+              <View
+                style={[
+                  styles.categoryTagOnHero,
+                  { backgroundColor: categoryInfo.badgeColor },
+                ]}
+              >
+                <Text style={styles.categoryTagOnHeroText}>
+                  {categoryInfo.displayName}
+                </Text>
+              </View>
+
+              <View style={styles.targetRegionTagOnHero}>
+                <MaterialCommunityIcons
+                  name="map-marker-radius"
+                  size={12}
+                  color={Colors.white}
+                />
+                <Text style={styles.targetRegionTagOnHeroText}>
+                  {activity.targetRegion}
+                </Text>
+              </View>
+            </View>
+
+            {/* Tap to expand banner */}
+            <View style={styles.heroTapExpandBadge}>
+              <MaterialCommunityIcons
+                name="arrow-expand-all"
+                size={14}
+                color={Colors.white}
+              />
+              <Text style={styles.heroTapExpandText}>Lihat Poster Penuh</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.categoryRegionRow}>
+            <View
+              style={[
+                styles.categoryTag,
+                { backgroundColor: categoryInfo.containerColor },
+              ]}
+            >
+              <Text
+                style={[styles.categoryTagText, { color: categoryInfo.badgeColor }]}
+              >
+                {categoryInfo.displayName}
+              </Text>
+            </View>
+
+            <View style={styles.targetRegionTag}>
+              <Text style={styles.targetRegionTagText}>
+                Wilayah: {activity.targetRegion}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Title */}
         <Text style={styles.detailTitle}>{activity.title}</Text>
@@ -248,57 +384,85 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           <View
             style={[
               styles.organizerAvatar,
-              { backgroundColor: organizerRoleInfo.badgeColor },
+              { backgroundColor: `${organizerRoleInfo.badgeColor}20` },
             ]}
           >
-            <MaterialCommunityIcons name="account" size={22} color={Colors.white} />
-          </View>
-          <View style={styles.organizerInfo}>
-            <Text style={styles.organizerName}>
-              Penyelenggara: {activity.organizerName}
-            </Text>
             <Text
               style={[
-                styles.organizerRole,
+                styles.organizerAvatarText,
                 { color: organizerRoleInfo.badgeColor },
               ]}
             >
-              {organizerRoleInfo.title}
+              {activity.organizerName.charAt(0)}
+            </Text>
+          </View>
+
+          <View style={styles.organizerInfo}>
+            <Text style={styles.organizerName}>{activity.organizerName}</Text>
+            <View style={styles.organizerRoleRow}>
+              <View
+                style={[
+                  styles.roleDot,
+                  { backgroundColor: organizerRoleInfo.badgeColor },
+                ]}
+              />
+              <Text style={styles.organizerRoleText}>
+                Penyelenggara: {organizerRoleInfo.title}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.statusPill}>
+            <Text style={styles.statusPillText}>
+              {activity.approvalStatus === 'PUBLISHED'
+                ? 'Terverifikasi'
+                : 'Menunggu ACC'}
             </Text>
           </View>
         </View>
 
-        {/* Date & Time Card */}
-        <View style={styles.dateTimeCard}>
-          <View style={styles.dateTimeRow}>
-            <MaterialCommunityIcons
-              name="calendar-month"
-              size={22}
-              color={Colors.skyBlueHeader}
-            />
-            <View style={styles.dateTimeTextGroup}>
-              <Text style={styles.dateTimeLabel}>Tanggal Kegiatan</Text>
-              <Text style={styles.dateTimeValue}>{activity.formattedDate}</Text>
+        {/* Description */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeaderTitle}>Deskripsi Kegiatan</Text>
+          <Text style={styles.descriptionText}>{activity.description}</Text>
+        </View>
+
+        {/* Date, Time & Location Cards */}
+        <View style={styles.infoCardsGrid}>
+          {/* Tanggal & Waktu */}
+          <View style={styles.infoGridCard}>
+            <View style={styles.infoIconCircle}>
+              <MaterialCommunityIcons
+                name="calendar-clock"
+                size={20}
+                color={Colors.skyBlueHeader}
+              />
+            </View>
+            <View style={styles.infoGridContent}>
+              <Text style={styles.infoGridLabel}>Jadwal & Waktu</Text>
+              <Text style={styles.infoGridMain}>{activity.formattedDate}</Text>
+              <Text style={styles.infoGridSub}>{activity.timeSlot}</Text>
             </View>
           </View>
 
-          <View style={styles.innerDivider} />
-
-          <View style={styles.dateTimeRow}>
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={22}
-              color={Colors.skyBlueHeader}
-            />
-            <View style={styles.dateTimeTextGroup}>
-              <Text style={styles.dateTimeLabel}>Waktu Pelaksanaan</Text>
-              <Text style={styles.dateTimeValue}>{activity.timeSlot}</Text>
+          {/* Lokasi */}
+          <View style={styles.infoGridCard}>
+            <View style={styles.infoIconCircle}>
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={20}
+                color={Colors.skyBlueHeader}
+              />
+            </View>
+            <View style={styles.infoGridContent}>
+              <Text style={styles.infoGridLabel}>Lokasi Kegiatan</Text>
+              <Text style={styles.infoGridMain}>{activity.locationName}</Text>
+              <Text style={styles.infoGridSub}>{activity.locationAddress}</Text>
             </View>
           </View>
         </View>
 
-        {/* Location & Map Preview */}
-        <Text style={styles.sectionHeaderTitle}>Lokasi Kegiatan & Peta</Text>
+        {/* Map Preview */}
         <MapPreviewCard
           locationName={activity.locationName}
           address={activity.locationAddress}
@@ -306,25 +470,23 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           longitude={activity.longitude}
         />
 
-        {/* Full Description */}
-        <Text style={[styles.sectionHeaderTitle, { marginTop: 18 }]}>
-          Deskripsi Lengkap
-        </Text>
-        <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionText}>{activity.description}</Text>
-        </View>
+        {/* Quota & Attendees Card */}
+        <View style={styles.quotaCard}>
+          <View style={styles.quotaHeader}>
+            <Text style={styles.quotaTitle}>Kehadiran Warga Lingkungan</Text>
+            {activity.quota && (
+              <Text style={styles.quotaRatioText}>
+                {activity.confirmedCount} / {activity.quota} Kuota Terisi
+              </Text>
+            )}
+          </View>
 
-        {/* Attendance Counter & Quota */}
-        <Text style={[styles.sectionHeaderTitle, { marginTop: 18 }]}>
-          Ringkasan Peserta (RSVP)
-        </Text>
-        <View style={styles.rsvpSummaryCard}>
           <View style={styles.rsvpStatsRow}>
             <View style={styles.rsvpStatItem}>
-              <Text style={[styles.rsvpStatNum, { color: Colors.skyBlueHeader }]}>
+              <Text style={[styles.rsvpStatNum, { color: Colors.kesehatanGreen }]}>
                 {activity.confirmedCount}
               </Text>
-              <Text style={styles.rsvpStatLabel}>Hadir</Text>
+              <Text style={styles.rsvpStatLabel}>Pasti Hadir</Text>
             </View>
 
             <View style={styles.rsvpStatItem}>
@@ -354,47 +516,203 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           )}
         </View>
 
-        {/* 3. DOCUMENTATION GALLERY */}
-        <View style={styles.docHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>Foto & Dokumentasi Kegiatan</Text>
-          <TouchableOpacity
-            style={styles.uploadDocButton}
-            onPress={() => setIsUploadPickerVisible(true)}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons
-              name="camera-plus"
-              size={15}
-              color={Colors.skyBlueHeader}
-            />
-            <Text style={styles.uploadDocButtonText}>Upload Foto</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.galleryScrollView}
-          contentContainerStyle={styles.galleryScroll}
-        >
-          {allPhotos.map((photo, index) => (
-            <TouchableOpacity
-              key={`${photo}-${index}`}
-              style={styles.photoThumbContainer}
-              activeOpacity={0.85}
-              onPress={() => setPreviewPhotoUrl(photo)}
-            >
-              <Image source={{ uri: photo }} style={styles.photoThumb} />
-              <View style={styles.zoomOverlay}>
-                <MaterialCommunityIcons
-                  name="magnify-plus"
-                  size={14}
-                  color={Colors.white}
-                />
+        {/* 3. ARSIP GALERI FOTO & VIDEO DOKUMENTASI KEGIATAN */}
+        <View style={styles.archiveSectionCard}>
+          {/* Header Section */}
+          <View style={styles.archiveHeaderRow}>
+            <View style={styles.archiveHeaderTitleGroup}>
+              <MaterialCommunityIcons
+                name="folder-play-outline"
+                size={22}
+                color={Colors.skyBlueHeader}
+              />
+              <View>
+                <Text style={styles.archiveSectionTitle}>
+                  Arsip Foto & Video Dokumentasi
+                </Text>
+                <Text style={styles.archiveSectionSubtitle}>
+                  {photosList.length} Foto • {videosList.length} Video Terarsip
+                </Text>
               </View>
+            </View>
+
+            {/* Media Upload Buttons */}
+            <View style={styles.archiveActionBtnsGroup}>
+              <TouchableOpacity
+                style={styles.addMediaBtn}
+                onPress={() => setIsUploadPhotoPickerVisible(true)}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="camera-plus"
+                  size={15}
+                  color={Colors.skyBlueHeader}
+                />
+                <Text style={styles.addMediaBtnText}>+ Foto</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.addMediaBtnVideo}
+                onPress={() => setIsUploadVideoModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="video-plus"
+                  size={15}
+                  color={Colors.onYellowContainer}
+                />
+                <Text style={styles.addMediaBtnVideoText}>+ Video</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Media Filter Tabs */}
+          <View style={styles.mediaTabsRow}>
+            <TouchableOpacity
+              style={[
+                styles.mediaTab,
+                mediaFilter === 'ALL' && styles.mediaTabActive,
+              ]}
+              onPress={() => setMediaFilter('ALL')}
+            >
+              <Text
+                style={[
+                  styles.mediaTabText,
+                  mediaFilter === 'ALL' && styles.mediaTabTextActive,
+                ]}
+              >
+                Semua ({totalMediaCount})
+              </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.mediaTab,
+                mediaFilter === 'PHOTOS' && styles.mediaTabActive,
+              ]}
+              onPress={() => setMediaFilter('PHOTOS')}
+            >
+              <Text
+                style={[
+                  styles.mediaTabText,
+                  mediaFilter === 'PHOTOS' && styles.mediaTabTextActive,
+                ]}
+              >
+                Foto ({photosList.length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.mediaTab,
+                mediaFilter === 'VIDEOS' && styles.mediaTabActive,
+              ]}
+              onPress={() => setMediaFilter('VIDEOS')}
+            >
+              <Text
+                style={[
+                  styles.mediaTabText,
+                  mediaFilter === 'VIDEOS' && styles.mediaTabTextActive,
+                ]}
+              >
+                Video ({videosList.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Gallery Media Grid */}
+          {totalMediaCount === 0 ? (
+            <View style={styles.emptyMediaBox}>
+              <MaterialCommunityIcons
+                name="image-multiple-outline"
+                size={40}
+                color={Colors.textNavyMuted}
+              />
+              <Text style={styles.emptyMediaTitle}>Belum Ada Arsip Dokumentasi</Text>
+              <Text style={styles.emptyMediaSubtitle}>
+                Foto dan video kegiatan yang diunggah akan tersimpan rapi di sini.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.mediaGrid}>
+              {/* Photo Items */}
+              {(mediaFilter === 'ALL' || mediaFilter === 'PHOTOS') &&
+                photosList.map((photo, index) => (
+                  <View key={`photo-${index}`} style={styles.mediaItemContainer}>
+                    <TouchableOpacity
+                      style={styles.photoItemCard}
+                      activeOpacity={0.85}
+                      onPress={() => setPreviewPhotoUrl(photo)}
+                    >
+                      <Image source={{ uri: photo }} style={styles.photoGridImage} />
+                      <View style={styles.photoBadgePill}>
+                        <MaterialCommunityIcons
+                          name="image"
+                          size={11}
+                          color={Colors.white}
+                        />
+                        <Text style={styles.photoBadgeText}>Foto #{index + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Delete Photo Button */}
+                    <TouchableOpacity
+                      style={styles.deleteMediaFloatingBtn}
+                      activeOpacity={0.8}
+                      onPress={() => confirmDeletePhoto(photo)}
+                    >
+                      <MaterialCommunityIcons
+                        name="trash-can-outline"
+                        size={15}
+                        color={Colors.urgentRed}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+              {/* Video Items */}
+              {(mediaFilter === 'ALL' || mediaFilter === 'VIDEOS') &&
+                videosList.map((video, index) => (
+                  <View key={`video-${index}`} style={styles.mediaItemContainer}>
+                    <TouchableOpacity
+                      style={styles.videoItemCard}
+                      activeOpacity={0.85}
+                      onPress={() => setPreviewVideoUrl(video)}
+                    >
+                      <View style={styles.videoPlaceholderCover}>
+                        <MaterialCommunityIcons
+                          name="play-circle"
+                          size={38}
+                          color={Colors.white}
+                        />
+                      </View>
+                      <View style={styles.videoBadgePill}>
+                        <MaterialCommunityIcons
+                          name="video"
+                          size={11}
+                          color={Colors.white}
+                        />
+                        <Text style={styles.videoBadgeText}>Video #{index + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Delete Video Button */}
+                    <TouchableOpacity
+                      style={styles.deleteMediaFloatingBtn}
+                      activeOpacity={0.8}
+                      onPress={() => confirmDeleteVideo(video)}
+                    >
+                      <MaterialCommunityIcons
+                        name="trash-can-outline"
+                        size={15}
+                        color={Colors.urgentRed}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* 4. INTERACTIVE RSVP BOTTOM BAR */}
@@ -507,23 +825,23 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         </View>
       </View>
 
-      {/* 5. UPLOAD SOURCE SELECTION MODAL (CAMERA / GALLERY) */}
+      {/* 5. UPLOAD PHOTO SOURCE SHEET (CAMERA / GALLERY) */}
       <Modal
-        visible={isUploadPickerVisible}
+        visible={isUploadPhotoPickerVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setIsUploadPickerVisible(false)}
+        onRequestClose={() => setIsUploadPhotoPickerVisible(false)}
       >
         <TouchableOpacity
           style={styles.pickerModalBackdrop}
           activeOpacity={1}
-          onPress={() => setIsUploadPickerVisible(false)}
+          onPress={() => setIsUploadPhotoPickerVisible(false)}
         >
           <View style={styles.pickerSheetContainer}>
             <View style={styles.pickerHandle} />
-            <Text style={styles.pickerTitle}>Unggah Foto Dokumentasi</Text>
+            <Text style={styles.pickerTitle}>Tambah Foto Dokumentasi</Text>
             <Text style={styles.pickerSubtitle}>
-              Pilih sumber foto dari smartphone Anda
+              Pilih sumber foto dokumentasi kegiatan
             </Text>
 
             <TouchableOpacity
@@ -556,7 +874,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
               activeOpacity={0.8}
               onPress={handlePickFromGallery}
             >
-              <View style={[styles.pickerIconCircle, { backgroundColor: Colors.yellowContainer }]}>
+              <View style={[styles.pickerIconCircle, { backgroundColor: '#FEF3C7' }]}>
                 <MaterialCommunityIcons
                   name="image-multiple"
                   size={24}
@@ -566,7 +884,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
               <View style={styles.pickerOptionInfo}>
                 <Text style={styles.pickerOptionTitle}>Pilih dari Galeri HP</Text>
                 <Text style={styles.pickerOptionDesc}>
-                  Pilih file gambar yang tersimpan di memori HP
+                  Pilih file foto dari galeri smartphone
                 </Text>
               </View>
               <MaterialCommunityIcons
@@ -578,7 +896,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
 
             <TouchableOpacity
               style={styles.pickerCancelButton}
-              onPress={() => setIsUploadPickerVisible(false)}
+              onPress={() => setIsUploadPhotoPickerVisible(false)}
             >
               <Text style={styles.pickerCancelText}>Batal</Text>
             </TouchableOpacity>
@@ -586,7 +904,86 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         </TouchableOpacity>
       </Modal>
 
-      {/* 6. FULLSCREEN PHOTO PREVIEW MODAL */}
+      {/* 6. UPLOAD VIDEO SHEET / LINK MODAL */}
+      <Modal
+        visible={isUploadVideoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsUploadVideoModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.pickerModalBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsUploadVideoModalVisible(false)}
+        >
+          <View style={styles.pickerSheetContainer}>
+            <View style={styles.pickerHandle} />
+            <Text style={styles.pickerTitle}>Tambah Video Dokumentasi</Text>
+            <Text style={styles.pickerSubtitle}>
+              Pilih file video atau masukkan tautan video kegiatan
+            </Text>
+
+            <TouchableOpacity
+              style={styles.pickerOptionCard}
+              activeOpacity={0.8}
+              onPress={handlePickVideoFromGallery}
+            >
+              <View style={[styles.pickerIconCircle, { backgroundColor: '#EDE9FE' }]}>
+                <MaterialCommunityIcons
+                  name="video-plus"
+                  size={24}
+                  color="#7C3AED"
+                />
+              </View>
+              <View style={styles.pickerOptionInfo}>
+                <Text style={styles.pickerOptionTitle}>Pilih Video dari Galeri</Text>
+                <Text style={styles.pickerOptionDesc}>
+                  Upload rekaman video yang tersimpan di HP
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color={Colors.textNavyMuted}
+              />
+            </TouchableOpacity>
+
+            {/* Input Video Link */}
+            <View style={styles.videoLinkInputContainer}>
+              <Text style={styles.videoInputLabel}>Atau Masukkan Tautan Video:</Text>
+              <TextInput
+                style={styles.videoTextInput}
+                placeholder="https://... (Link MP4, YouTube, Google Drive)"
+                placeholderTextColor={Colors.textNavyMuted}
+                value={videoUrlInput}
+                onChangeText={setVideoUrlInput}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.saveVideoUrlBtn}
+                activeOpacity={0.85}
+                onPress={handleSaveVideoUrl}
+              >
+                <MaterialCommunityIcons
+                  name="content-save"
+                  size={16}
+                  color={Colors.onYellowContainer}
+                />
+                <Text style={styles.saveVideoUrlBtnText}>Simpan Link Video</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.pickerCancelButton}
+              onPress={() => setIsUploadVideoModalVisible(false)}
+            >
+              <Text style={styles.pickerCancelText}>Batal</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 7. FULLSCREEN PHOTO PREVIEW LIGHTBOX */}
       <Modal
         visible={previewPhotoUrl !== null}
         transparent
@@ -611,17 +1008,18 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             )}
 
             <View style={styles.modalActionsRow}>
-              {previewPhotoUrl && activity.photos?.includes(previewPhotoUrl) && (
+              {previewPhotoUrl && (
                 <TouchableOpacity
                   style={styles.modalDeleteButton}
                   onPress={() => {
-                    deleteDocumentationPhoto(activity.id, previewPhotoUrl);
-                    setPreviewPhotoUrl(null);
+                    if (previewPhotoUrl) {
+                      confirmDeletePhoto(previewPhotoUrl);
+                    }
                   }}
                 >
                   <MaterialCommunityIcons
-                    name="trash-can-outline"
-                    size={20}
+                    name="trash-can"
+                    size={18}
                     color={Colors.urgentRed}
                   />
                   <Text style={styles.modalDeleteButtonText}>Hapus Foto</Text>
@@ -631,10 +1029,10 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
               <TouchableOpacity
                 style={[
                   styles.modalDownloadButton,
-                  previewPhotoUrl && activity.photos?.includes(previewPhotoUrl) && { flex: 1 },
+                  previewPhotoUrl && { flex: 1 },
                 ]}
                 onPress={() => {
-                  showToast('Foto tersimpan!');
+                  showToast('Foto dokumentasi tersimpan!');
                   setPreviewPhotoUrl(null);
                 }}
               >
@@ -650,7 +1048,73 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         </View>
       </Modal>
 
-      {/* 7. VERIFICATION MODAL */}
+      {/* 8. VIDEO PLAYER / PREVIEW MODAL */}
+      <Modal
+        visible={previewVideoUrl !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewVideoUrl(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.videoPreviewModalCard}>
+            <View style={styles.modalHeaderVideo}>
+              <Text style={styles.videoModalTitle}>Video Dokumentasi Kegiatan</Text>
+              <TouchableOpacity onPress={() => setPreviewVideoUrl(null)}>
+                <MaterialCommunityIcons name="close" size={24} color={Colors.textNavyDark} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.videoPlayerBox}>
+              <MaterialCommunityIcons
+                name="motion-play-outline"
+                size={64}
+                color={Colors.skyBlueHeader}
+              />
+              <Text style={styles.videoPlayHint}>
+                Klik tombol di bawah untuk memutar rekaman video dokumentasi kegiatan ini:
+              </Text>
+
+              <TouchableOpacity
+                style={styles.playExternalVideoBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  if (previewVideoUrl) handlePlayVideo(previewVideoUrl);
+                }}
+              >
+                <MaterialCommunityIcons name="play" size={20} color={Colors.white} />
+                <Text style={styles.playExternalVideoBtnText}>Putar Video Sekarang</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.videoModalFooterActions}>
+              <TouchableOpacity
+                style={styles.modalDeleteButton}
+                onPress={() => {
+                  if (previewVideoUrl) {
+                    confirmDeleteVideo(previewVideoUrl);
+                  }
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="trash-can"
+                  size={18}
+                  color={Colors.urgentRed}
+                />
+                <Text style={styles.modalDeleteButtonText}>Hapus Video</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.closeVideoModalBtn}
+                onPress={() => setPreviewVideoUrl(null)}
+              >
+                <Text style={styles.closeVideoModalBtnText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 9. VERIFICATION MODAL */}
       <VerificationModal
         visible={isVerificationModalVisible}
         onClose={() => setIsVerificationModalVisible(false)}
@@ -673,7 +1137,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
-    elevation: 3,
+    elevation: 2,
   },
   topIconButton: {
     padding: 8,
@@ -694,42 +1158,112 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 110,
+    gap: 14,
+  },
+  heroThumbnailCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 200,
+    backgroundColor: Colors.skyBlueHeader,
+    elevation: 3,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    position: 'relative',
+  },
+  heroThumbnailImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  heroThumbnailGradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  heroThumbnailTopRow: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryTagOnHero: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  categoryTagOnHeroText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  targetRegionTagOnHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  targetRegionTagOnHeroText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  heroTapExpandBadge: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  heroTapExpandText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.white,
   },
   categoryRegionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
   },
   categoryTag: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   categoryTagText: {
     fontSize: 12,
     fontWeight: '700',
   },
   targetRegionTag: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
+    backgroundColor: Colors.skyBlueSurfaceVariant,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   targetRegionTagText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.skyBlueHeader,
   },
   detailTitle: {
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '800',
     color: Colors.textNavyDark,
     lineHeight: 28,
-    marginBottom: 12,
   },
   organizerCard: {
     backgroundColor: Colors.white,
@@ -739,15 +1273,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.skyBlueSurfaceVariant,
-    marginBottom: 14,
     gap: 12,
   },
   organizerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  organizerAvatarText: {
+    fontSize: 18,
+    fontWeight: '800',
   },
   organizerInfo: {
     flex: 1,
@@ -757,165 +1294,349 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textNavyDark,
   },
-  organizerRole: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  dateTimeCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.yellowBorderLis,
-    marginBottom: 16,
-  },
-  dateTimeRow: {
+  organizerRoleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
+    marginTop: 2,
   },
-  dateTimeTextGroup: {
-    flex: 1,
+  roleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  dateTimeLabel: {
+  organizerRoleText: {
     fontSize: 11,
     color: Colors.textNavyMuted,
   },
-  dateTimeValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
-    marginTop: 1,
+  statusPill: {
+    backgroundColor: Colors.kesehatanGreenContainer,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
-  innerDivider: {
-    height: 1,
-    backgroundColor: Colors.skyBlueSurfaceVariant,
-    marginVertical: 10,
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.kesehatanGreen,
+  },
+  sectionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
   },
   sectionHeaderTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.textNavyDark,
     marginBottom: 8,
   },
-  descriptionCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-    marginBottom: 16,
-  },
   descriptionText: {
     fontSize: 13,
+    lineHeight: 20,
     color: Colors.textNavySecondary,
-    lineHeight: 21,
   },
-  rsvpSummaryCard: {
+  infoCardsGrid: {
+    gap: 10,
+  },
+  infoGridCard: {
     backgroundColor: Colors.white,
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     borderWidth: 1,
     borderColor: Colors.skyBlueSurfaceVariant,
-    marginBottom: 16,
-    elevation: 1,
+  },
+  infoIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.skyBlueBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoGridContent: {
+    flex: 1,
+  },
+  infoGridLabel: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    fontWeight: '600',
+  },
+  infoGridMain: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+    marginTop: 1,
+  },
+  infoGridSub: {
+    fontSize: 11,
+    color: Colors.textNavySecondary,
+    marginTop: 1,
+  },
+  quotaCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+  },
+  quotaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  quotaTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  quotaRatioText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
   },
   rsvpStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
+    marginBottom: 10,
   },
   rsvpStatItem: {
     alignItems: 'center',
   },
   rsvpStatNum: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
   },
   rsvpStatLabel: {
-    fontSize: 12,
-    color: Colors.textNavySecondary,
+    fontSize: 11,
+    color: Colors.textNavyMuted,
     marginTop: 2,
   },
   progressBarContainer: {
-    height: 8,
-    backgroundColor: Colors.skyBlueSurfaceVariant,
-    borderRadius: 4,
-    marginTop: 14,
+    height: 6,
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 3,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: Colors.yellowHighlight,
-    borderRadius: 4,
+    backgroundColor: Colors.kesehatanGreen,
+    borderRadius: 3,
   },
-  docHeaderRow: {
+  archiveSectionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.skyBlueBorder,
+  },
+  archiveHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginTop: 14,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  uploadDocButton: {
+  archiveHeaderTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.skyBlueHeader,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    gap: 4,
+    gap: 8,
+    flex: 1,
   },
-  uploadDocButtonText: {
+  archiveSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textNavyDark,
+  },
+  archiveSectionSubtitle: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    marginTop: 1,
+  },
+  archiveActionBtnsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  addMediaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.skyBlueSurfaceVariant,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    gap: 3,
+  },
+  addMediaBtnText: {
     fontSize: 11,
     fontWeight: '700',
     color: Colors.skyBlueHeader,
   },
-  galleryScroll: {
-    gap: 10,
-    paddingBottom: 10,
-  },
-  photoThumbContainer: {
-    width: 130,
-    height: 100,
-    borderRadius: 14,
-    backgroundColor: Colors.white,
+  addMediaBtnVideo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.yellowContainer,
     borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-    overflow: 'hidden',
+    borderColor: Colors.yellowBorderLis,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    gap: 3,
+  },
+  addMediaBtnVideoText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.onYellowContainer,
+  },
+  mediaTabsRow: {
+    flexDirection: 'row',
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 12,
+  },
+  mediaTab: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderRadius: 9,
+  },
+  mediaTabActive: {
+    backgroundColor: Colors.skyBlueHeader,
+  },
+  mediaTabText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textNavySecondary,
+  },
+  mediaTabTextActive: {
+    color: Colors.white,
+  },
+  emptyMediaBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 6,
+  },
+  emptyMediaTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  emptyMediaSubtitle: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  mediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  mediaItemContainer: {
+    width: '48%',
     position: 'relative',
   },
-  photoThumb: {
+  photoItemCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    height: 120,
+    backgroundColor: Colors.skyBlueBackground,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+    position: 'relative',
+  },
+  photoGridImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
-  zoomOverlay: {
+  photoBadgePill: {
     position: 'absolute',
     bottom: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  photoBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  videoItemCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    height: 120,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bottomActionBar: {
+  videoPlaceholderCover: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoBadgePill: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: Colors.skyBlueHeader,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  videoBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  deleteMediaFloatingBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
     backgroundColor: Colors.white,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  bottomActionBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
     elevation: 8,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   bottomBarTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: Colors.textNavyDark,
     marginBottom: 8,
@@ -926,21 +1647,21 @@ const styles = StyleSheet.create({
   },
   actionRsvpBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    borderRadius: 12,
+    paddingVertical: 10,
+    gap: 5,
   },
   actionRsvpBtnOutline: {
     borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
-    backgroundColor: Colors.white,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.skyBlueBackground,
   },
   actionRsvpBtnAttendingActive: {
     backgroundColor: Colors.yellowHighlight,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.yellowBorderLis,
   },
   actionRsvpBtnMaybeActive: {
@@ -954,19 +1675,158 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textNavyDark,
   },
+  notFoundContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.skyBlueBackground,
+  },
+  notFoundText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+    marginBottom: 16,
+  },
+  backButtonSimple: {
+    backgroundColor: Colors.skyBlueHeader,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  backButtonSimpleText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  pickerModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheetContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  pickerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.borderLight,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  pickerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textNavyDark,
+    marginBottom: 4,
+  },
+  pickerSubtitle: {
+    fontSize: 12,
+    color: Colors.textNavyMuted,
+    marginBottom: 16,
+  },
+  pickerOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    marginBottom: 10,
+    gap: 12,
+  },
+  pickerIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerOptionInfo: {
+    flex: 1,
+  },
+  pickerOptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  pickerOptionDesc: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    marginTop: 2,
+  },
+  videoLinkInputContainer: {
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  videoInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+    marginBottom: 6,
+  },
+  videoTextInput: {
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: Colors.textNavyDark,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    marginBottom: 8,
+  },
+  saveVideoUrlBtn: {
+    backgroundColor: Colors.yellowContainer,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+    borderRadius: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  saveVideoUrlBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.onYellowContainer,
+  },
+  pickerCancelButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  pickerCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textNavyMuted,
+  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     flex: 1,
-    padding: 16,
+    width: '100%',
     justifyContent: 'space-between',
+    padding: 16,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 10,
   },
   modalTitle: {
     fontSize: 16,
@@ -976,147 +1836,106 @@ const styles = StyleSheet.create({
   modalImage: {
     flex: 1,
     width: '100%',
-    borderRadius: 16,
-    marginVertical: 16,
-  },
-  galleryScrollView: {
-    flexGrow: 0,
-    flexShrink: 0,
   },
   modalActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    paddingBottom: 10,
   },
   modalDeleteButton: {
-    height: 50,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderWidth: 1,
     borderColor: Colors.urgentRed,
-    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
     gap: 6,
   },
   modalDeleteButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.urgentRed,
   },
   modalDownloadButton: {
-    height: 50,
     backgroundColor: Colors.yellowHighlight,
-    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
   },
   modalDownloadButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.onYellowContainer,
   },
-  pickerModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'flex-end',
-  },
-  pickerSheetContainer: {
+  videoPreviewModalCard: {
     backgroundColor: Colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    borderRadius: 24,
+    padding: 20,
+    width: '90%',
+    maxWidth: 380,
+    elevation: 8,
   },
-  pickerHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.borderLight,
-    alignSelf: 'center',
-    marginBottom: 14,
-  },
-  pickerTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: Colors.textNavyDark,
-    textAlign: 'center',
-  },
-  pickerSubtitle: {
-    fontSize: 12,
-    color: Colors.textNavyMuted,
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: 16,
-  },
-  pickerOptionCard: {
+  modalHeaderVideo: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  videoModalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textNavyDark,
+  },
+  videoPlayerBox: {
     backgroundColor: Colors.skyBlueBackground,
     borderRadius: 16,
-    padding: 14,
-    marginVertical: 6,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.skyBlueSurfaceVariant,
+    marginBottom: 16,
   },
-  pickerIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  pickerOptionInfo: {
-    flex: 1,
-  },
-  pickerOptionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
-  },
-  pickerOptionDesc: {
-    fontSize: 11,
+  videoPlayHint: {
+    fontSize: 12,
     color: Colors.textNavySecondary,
-    marginTop: 2,
+    textAlign: 'center',
+    lineHeight: 17,
+    marginTop: 8,
+    marginBottom: 14,
   },
-  pickerCancelButton: {
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    backgroundColor: Colors.skyBlueSurfaceVariant,
-  },
-  pickerCancelText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textNavySecondary,
-  },
-  notFoundContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: Colors.skyBlueBackground,
-  },
-  notFoundText: {
-    fontSize: 16,
-    color: Colors.textNavyDark,
-    marginBottom: 12,
-  },
-  backButtonSimple: {
+  playExternalVideoBtn: {
     backgroundColor: Colors.skyBlueHeader,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  playExternalVideoBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  videoModalFooterActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  closeVideoModalBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 10,
   },
-  backButtonSimpleText: {
-    color: Colors.white,
+  closeVideoModalBtnText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: Colors.skyBlueHeader,
   },
 });

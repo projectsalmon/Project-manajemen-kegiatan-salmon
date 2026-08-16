@@ -90,6 +90,7 @@ export interface ActivityItem {
   quota?: number | null;
   userRsvpStatus: RsvpStatusType;
   photos: string[];
+  videos?: string[];
   imageUrl?: string | null;
   approvalStatus: ApprovalStatusType;
   needsFollowUp?: boolean;
