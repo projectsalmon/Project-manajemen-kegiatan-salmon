@@ -16,9 +16,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { LocationSettingsModal } from '../components/LocationSettingsModal';
 import { TimePickerModal } from '../components/TimePickerModal';
+import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
 import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { ActivityCategoryType, LocationPresetItem } from '../types';
+import { ActivityCategoryType, ActivityItem, LocationPresetItem } from '../types';
+import { buildActivityApprovalMessage } from '../utils/whatsappHelpers';
 
 interface CreateEditActivityScreenProps {
   route: any;
@@ -30,6 +32,8 @@ export const CreateEditActivityScreen: React.FC<
 > = ({ route, navigation }) => {
   const { editId, initialCategory } = route.params || {};
   const {
+    currentUser,
+    contacts,
     activities,
     locationPresets,
     addActivity,
@@ -79,6 +83,20 @@ export const CreateEditActivityScreen: React.FC<
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
   const [isLocationSettingsVisible, setIsLocationSettingsVisible] = useState(false);
+
+  const [waModalData, setWaModalData] = useState<{
+    visible: boolean;
+    targetName: string;
+    targetRole: string;
+    targetPhone: string;
+    messageText: string;
+  }>({
+    visible: false,
+    targetName: '',
+    targetRole: '',
+    targetPhone: '',
+    messageText: '',
+  });
 
   const [photoUri, setPhotoUri] = useState<string | null>(
     existing?.imageUrl || null
@@ -179,6 +197,33 @@ export const CreateEditActivityScreen: React.FC<
     }
 
     const finalQuota = hasQuotaLimit ? quotaCount : null;
+    const isWaitingApproval = currentUser.role === 'RT' || currentUser.role === 'RW';
+
+    const tempActivity: ActivityItem = {
+      id: editId || `ACT-${Date.now() % 10000}`,
+      title: title.trim(),
+      description: description.trim(),
+      category: selectedCategory,
+      customCategoryName:
+        selectedCategory === 'LAINNYA' ? customCategoryName.trim() : undefined,
+      dateIso,
+      formattedDate,
+      timeSlot,
+      locationName: locationName.trim(),
+      locationAddress: locationAddress.trim(),
+      latitude: -6.215,
+      longitude: 106.845,
+      targetRegion: targetRegion.trim(),
+      organizerRole: currentUser.role,
+      organizerName: currentUser.name,
+      confirmedCount: 1,
+      maybeCount: 0,
+      quota: finalQuota,
+      userRsvpStatus: 'ATTENDING',
+      photos: photoUri ? [photoUri] : [],
+      imageUrl: photoUri,
+      approvalStatus: currentUser.role === 'RT' ? 'WAITING_RW_APPROVAL' : currentUser.role === 'RW' ? 'WAITING_ADMIN_APPROVAL' : 'PUBLISHED',
+    };
 
     if (editId && existing) {
       updateActivity(editId, {
@@ -214,7 +259,18 @@ export const CreateEditActivityScreen: React.FC<
       });
     }
 
-    navigation.goBack();
+    if (isWaitingApproval) {
+      const waInfo = buildActivityApprovalMessage(tempActivity, currentUser, contacts);
+      setWaModalData({
+        visible: true,
+        targetName: waInfo.targetName,
+        targetRole: waInfo.targetRole,
+        targetPhone: waInfo.targetPhone,
+        messageText: waInfo.message,
+      });
+    } else {
+      navigation.goBack();
+    }
   };
 
   return (
@@ -842,6 +898,25 @@ export const CreateEditActivityScreen: React.FC<
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* 13. WHATSAPP APPROVAL REQUEST MODAL */}
+      <WhatsAppApprovalModal
+        visible={waModalData.visible}
+        title={title}
+        itemType="KEGIATAN"
+        targetName={waModalData.targetName}
+        targetRole={waModalData.targetRole}
+        targetPhone={waModalData.targetPhone}
+        messageText={waModalData.messageText}
+        onClose={() => {
+          setWaModalData((prev) => ({ ...prev, visible: false }));
+          navigation.goBack();
+        }}
+        onSuccessSent={() => {
+          setWaModalData((prev) => ({ ...prev, visible: false }));
+          navigation.goBack();
+        }}
+      />
     </SafeAreaView>
   );
 };

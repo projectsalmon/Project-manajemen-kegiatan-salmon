@@ -18,9 +18,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { MapPreviewCard } from '../components/MapPreviewCard';
 import { VerificationModal } from '../components/VerificationModal';
+import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
 import { CategoryMeta, Colors, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { RsvpStatusType } from '../types';
+import { buildActivityApprovalMessage } from '../utils/whatsappHelpers';
 
 interface ActivityDetailScreenProps {
   route: any;
@@ -36,6 +38,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const { activityId } = route.params || {};
   const {
     currentUser,
+    contacts,
     activities,
     updateRsvpStatus,
     addDocumentationPhoto,
@@ -51,6 +54,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const [isUploadVideoModalVisible, setIsUploadVideoModalVisible] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [mediaFilter, setMediaFilter] = useState<MediaFilterType>('ALL');
+  const [isWhatsAppModalVisible, setIsWhatsAppModalVisible] = useState(false);
 
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
   const [pendingRsvpStatus, setPendingRsvpStatus] = useState<RsvpStatusType | null>(null);
@@ -92,6 +96,8 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const categoryInfo = CategoryMeta[activity.category] || CategoryMeta.KERJA_BAKTI;
   const organizerRoleInfo = UserRolesMeta[activity.organizerRole] || UserRolesMeta.WARGA;
   const isAdmin = currentUser.role !== 'WARGA';
+
+  const waApprovalInfo = buildActivityApprovalMessage(activity, currentUser, contacts);
 
   // Hero Thumbnail (paling atas)
   const heroThumbnailUrl =
@@ -420,6 +426,45 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             </Text>
           </View>
         </View>
+
+        {/* Status Persetujuan & Tombol WhatsApp ACC Banner */}
+        {activity.approvalStatus !== 'PUBLISHED' && waApprovalInfo && (
+          <View style={styles.approvalStatusBanner}>
+            <View style={styles.approvalStatusHeaderRow}>
+              <MaterialCommunityIcons
+                name="clock-alert-outline"
+                size={22}
+                color={Colors.yellowAccent}
+              />
+              <View style={styles.approvalStatusTextGroup}>
+                <Text style={styles.approvalStatusBannerTitle}>
+                  {activity.approvalStatus === 'WAITING_RW_APPROVAL'
+                    ? 'Menunggu Persetujuan Ketua RW 05'
+                    : 'Menunggu Persetujuan Staf Kelurahan'}
+                </Text>
+                <Text style={styles.approvalStatusBannerSub}>
+                  {activity.followUpNote ||
+                    'Kegiatan belum dapat dilihat oleh warga umum sebelum disetujui resmi.'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.requestApprovalWaBtn}
+              activeOpacity={0.85}
+              onPress={() => setIsWhatsAppModalVisible(true)}
+            >
+              <MaterialCommunityIcons
+                name="whatsapp"
+                size={18}
+                color={Colors.white}
+              />
+              <Text style={styles.requestApprovalWaBtnText}>
+                Minta ACC via WhatsApp ({waApprovalInfo.targetRole})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Description */}
         <View style={styles.sectionCard}>
@@ -1120,6 +1165,21 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         onClose={() => setIsVerificationModalVisible(false)}
         onSuccess={handleVerificationSuccess}
       />
+
+      {/* 10. WHATSAPP APPROVAL REQUEST MODAL */}
+      {waApprovalInfo && (
+        <WhatsAppApprovalModal
+          visible={isWhatsAppModalVisible}
+          onClose={() => setIsWhatsAppModalVisible(false)}
+          title={activity.title}
+          itemType="KEGIATAN"
+          targetName={waApprovalInfo.targetName}
+          targetRole={waApprovalInfo.targetRole}
+          targetPhone={waApprovalInfo.targetPhone}
+          messageText={waApprovalInfo.message}
+          onSuccessSent={() => setIsWhatsAppModalVisible(false)}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -1319,6 +1379,48 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Colors.kesehatanGreen,
+  },
+  approvalStatusBanner: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+    gap: 10,
+  },
+  approvalStatusHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  approvalStatusTextGroup: {
+    flex: 1,
+  },
+  approvalStatusBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.onYellowContainer,
+  },
+  approvalStatusBannerSub: {
+    fontSize: 11,
+    color: Colors.onYellowContainer,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  requestApprovalWaBtn: {
+    backgroundColor: Colors.whatsappGreen,
+    borderRadius: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    elevation: 2,
+  },
+  requestApprovalWaBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.white,
   },
   sectionCard: {
     backgroundColor: Colors.white,

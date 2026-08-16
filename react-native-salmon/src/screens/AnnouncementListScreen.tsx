@@ -14,13 +14,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AnnouncementCard } from '../components/AnnouncementCard';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { TimePickerModal } from '../components/TimePickerModal';
+import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
 import { Colors, UrgencyMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { AnnouncementItem, AnnouncementUrgencyType } from '../types';
+import { buildAnnouncementApprovalMessage } from '../utils/whatsappHelpers';
 
 export const AnnouncementListScreen: React.FC = () => {
   const {
     currentUser,
+    contacts,
     announcements,
     addAnnouncement,
     updateAnnouncement,
@@ -37,6 +40,20 @@ export const AnnouncementListScreen: React.FC = () => {
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] =
     useState<AnnouncementItem | null>(null);
+
+  const [waModalData, setWaModalData] = useState<{
+    visible: boolean;
+    targetName: string;
+    targetRole: string;
+    targetPhone: string;
+    messageText: string;
+  }>({
+    visible: false,
+    targetName: '',
+    targetRole: '',
+    targetPhone: '',
+    messageText: '',
+  });
 
   // Form states
   const [formTitle, setFormTitle] = useState('');
@@ -118,29 +135,66 @@ export const AnnouncementListScreen: React.FC = () => {
 
     const finalFormattedDate = `${formDate}${formTime ? ` • ${formTime}` : ''}`;
 
+    const isWaitingApproval = currentUser.role === 'RT' || currentUser.role === 'RW';
+
+    const tempAnnouncement: AnnouncementItem = {
+      id: editingAnnouncement?.id || `ANN-${Date.now() % 1000}`,
+      title: formTitle.trim(),
+      content: formContent.trim(),
+      urgency: formUrgency,
+      targetRegion: formTargetRegion.trim(),
+      formattedDate: finalFormattedDate,
+      authorRole: currentUser.role,
+      authorName: currentUser.name,
+      requirements: reqList,
+      additionalInfo: formAdditionalInfo ? formAdditionalInfo.trim() : null,
+      approvalStatus:
+        currentUser.role === 'RT'
+          ? 'WAITING_RW_APPROVAL'
+          : currentUser.role === 'RW'
+          ? 'WAITING_ADMIN_APPROVAL'
+          : 'PUBLISHED',
+      isPinned: false,
+    };
+
     if (editingAnnouncement) {
       updateAnnouncement(editingAnnouncement.id, {
-        title: formTitle,
-        content: formContent,
+        title: formTitle.trim(),
+        content: formContent.trim(),
         urgency: formUrgency,
-        targetRegion: formTargetRegion,
+        targetRegion: formTargetRegion.trim(),
         requirements: reqList,
-        additionalInfo: formAdditionalInfo || null,
+        additionalInfo: formAdditionalInfo ? formAdditionalInfo.trim() : null,
         formattedDate: finalFormattedDate,
       });
     } else {
       addAnnouncement({
-        title: formTitle,
-        content: formContent,
+        title: formTitle.trim(),
+        content: formContent.trim(),
         urgency: formUrgency,
-        targetRegion: formTargetRegion,
+        targetRegion: formTargetRegion.trim(),
         requirements: reqList,
-        additionalInfo: formAdditionalInfo || null,
+        additionalInfo: formAdditionalInfo ? formAdditionalInfo.trim() : null,
         formattedDate: finalFormattedDate,
       });
     }
 
     setIsFormModalVisible(false);
+
+    if (isWaitingApproval) {
+      const waInfo = buildAnnouncementApprovalMessage(
+        tempAnnouncement,
+        currentUser,
+        contacts
+      );
+      setWaModalData({
+        visible: true,
+        targetName: waInfo.targetName,
+        targetRole: waInfo.targetRole,
+        targetPhone: waInfo.targetPhone,
+        messageText: waInfo.message,
+      });
+    }
   };
 
   const handleShareDetail = async (ann: AnnouncementItem) => {
@@ -352,6 +406,54 @@ export const AnnouncementListScreen: React.FC = () => {
                   Diterbitkan oleh: {selectedForDetail.authorName} (
                   {selectedForDetail.authorRole})
                 </Text>
+
+                {/* WhatsApp Approval Banner for unapproved announcement */}
+                {selectedForDetail.approvalStatus !== 'PUBLISHED' && (
+                  <View style={styles.detailApprovalWaBanner}>
+                    <View style={styles.detailApprovalWaHeader}>
+                      <MaterialCommunityIcons
+                        name="clock-alert-outline"
+                        size={18}
+                        color={Colors.yellowAccent}
+                      />
+                      <Text style={styles.detailApprovalWaTitle}>
+                        {selectedForDetail.approvalStatus === 'WAITING_RW_APPROVAL'
+                          ? 'Menunggu Persetujuan Ketua RW'
+                          : 'Menunggu Persetujuan Kelurahan'}
+                      </Text>
+                    </View>
+                    <Text style={styles.detailApprovalWaSub}>
+                      Pengumuman ini belum tampil di beranda warga sebelum disetujui.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.detailRequestWaBtn}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        const waInfo = buildAnnouncementApprovalMessage(
+                          selectedForDetail,
+                          currentUser,
+                          contacts
+                        );
+                        setWaModalData({
+                          visible: true,
+                          targetName: waInfo.targetName,
+                          targetRole: waInfo.targetRole,
+                          targetPhone: waInfo.targetPhone,
+                          messageText: waInfo.message,
+                        });
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="whatsapp"
+                        size={18}
+                        color={Colors.white}
+                      />
+                      <Text style={styles.detailRequestWaBtnText}>
+                        Minta ACC via WhatsApp
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </ScrollView>
 
               <View style={styles.detailModalFooter}>
@@ -573,6 +675,19 @@ export const AnnouncementListScreen: React.FC = () => {
         onClose={() => setIsTimePickerVisible(false)}
         onSelectTime={(newTime) => setFormTime(newTime)}
       />
+
+      {/* WHATSAPP APPROVAL REQUEST MODAL */}
+      <WhatsAppApprovalModal
+        visible={waModalData.visible}
+        title={formTitle || 'Pengumuman Lingkungan'}
+        itemType="PENGUMUMAN"
+        targetName={waModalData.targetName}
+        targetRole={waModalData.targetRole}
+        targetPhone={waModalData.targetPhone}
+        messageText={waModalData.messageText}
+        onClose={() => setWaModalData((prev) => ({ ...prev, visible: false }))}
+        onSuccessSent={() => setWaModalData((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };
@@ -756,6 +871,45 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textNavyMuted,
     marginTop: 4,
+  },
+  detailApprovalWaBanner: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+    gap: 6,
+  },
+  detailApprovalWaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailApprovalWaTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.onYellowContainer,
+  },
+  detailApprovalWaSub: {
+    fontSize: 11,
+    color: Colors.onYellowContainer,
+    lineHeight: 16,
+  },
+  detailRequestWaBtn: {
+    backgroundColor: Colors.whatsappGreen,
+    borderRadius: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  detailRequestWaBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.white,
   },
   detailModalFooter: {
     flexDirection: 'row',
