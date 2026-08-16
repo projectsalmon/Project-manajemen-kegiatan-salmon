@@ -27,9 +27,8 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew assembleDebug
 
-    - name: Print Keystore SHA-1
-      run: |
-        keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android || true
+    - name: Print Keystore SHA-1 via Gradle
+      run: ./gradlew signingReport
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
