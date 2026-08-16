@@ -12,7 +12,7 @@ import {
   ApprovalStatusMeta,
   CategoryMeta,
   Colors,
-  FontFamily,
+  Fonts,
   RsvpStatusMeta,
 } from '../constants/theme';
 import { ActivityItem, RsvpStatusType } from '../types';
@@ -273,7 +273,8 @@ const styles = StyleSheet.create({
   fallbackText: {
     color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     marginTop: 4,
   },
   approvalBadge: {
@@ -287,7 +288,8 @@ const styles = StyleSheet.create({
   },
   approvalBadgeText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
   },
   shareOverlayButton: {
     position: 'absolute',
@@ -317,8 +319,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   categoryTagText: {
-    fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     includeFontPadding: false,
   },
   rightTagGroup: {
@@ -342,15 +345,17 @@ const styles = StyleSheet.create({
   },
   regionTagText: {
     fontSize: 11,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.skyBlueHeader,
     includeFontPadding: false,
   },
   titleText: {
-    fontSize: 15,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
-    lineHeight: 21,
+    lineHeight: 22,
     marginBottom: 6,
   },
   infoRow: {
@@ -360,14 +365,15 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   dateText: {
-    fontSize: 12,
-    fontFamily: FontFamily.medium,
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavySecondary,
     flex: 1,
   },
   locationText: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavyMuted,
     flex: 1,
   },
@@ -383,7 +389,8 @@ const styles = StyleSheet.create({
   },
   alertText: {
     fontSize: 11,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.urgentRed,
     flex: 1,
   },
@@ -404,13 +411,15 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   counterText: {
-    fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   quotaText: {
-    fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontSize: 12,
+    fontWeight: 'normal',
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavyMuted,
   },
   rsvpButton: {
@@ -424,7 +433,8 @@ const styles = StyleSheet.create({
   },
   rsvpButtonText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.onYellowContainer,
   },
   rsvpStatusPill: {
@@ -437,7 +447,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rsvpStatusPillText: {
-    fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
   },
 });

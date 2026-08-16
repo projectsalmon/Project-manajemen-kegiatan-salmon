@@ -15,7 +15,7 @@ import { AnnouncementCard } from '../components/AnnouncementCard';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { TimePickerModal } from '../components/TimePickerModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
-import { Colors, FontFamily, UrgencyMeta } from '../constants/theme';
+import { Colors, UrgencyMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { AnnouncementItem, AnnouncementUrgencyType } from '../types';
 import { buildAnnouncementApprovalMessage } from '../utils/whatsappHelpers';
@@ -716,7 +716,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
     includeFontPadding: false,
   },
@@ -750,13 +749,13 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
     color: Colors.textNavyDark,
     includeFontPadding: false,
   },
   chipTextActive: {
     color: Colors.onYellowContainer,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
   },
   divider: {
     height: 1,
@@ -785,8 +784,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: {
-    fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontSize: 14,
+    fontWeight: '700',
     color: Colors.onYellowContainer,
   },
   modalBackdrop: {
@@ -814,26 +813,24 @@ const styles = StyleSheet.create({
   },
   detailUrgencyText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
   },
   detailDateText: {
-    fontSize: 11,
-    fontFamily: FontFamily.medium,
+    fontSize: 12,
     color: Colors.textNavyMuted,
   },
   detailModalScroll: {
     marginVertical: 6,
   },
   detailModalTitle: {
-    fontSize: 16,
-    fontFamily: FontFamily.headingExtraBold,
+    fontSize: 17,
+    fontWeight: '800',
     color: Colors.textNavyDark,
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: 8,
   },
   detailModalContent: {
     fontSize: 13,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     lineHeight: 20,
     marginBottom: 12,
@@ -848,7 +845,7 @@ const styles = StyleSheet.create({
   },
   detailReqSectionTitle: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
     color: Colors.onYellowContainer,
     marginBottom: 6,
   },
@@ -861,19 +858,17 @@ const styles = StyleSheet.create({
   detailReqText: {
     fontSize: 12,
     color: Colors.onYellowContainer,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
     flex: 1,
   },
   detailAdditionalText: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     fontStyle: 'italic',
     marginBottom: 10,
   },
   detailAuthorText: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 4,
   },
@@ -893,12 +888,11 @@ const styles = StyleSheet.create({
   },
   detailApprovalWaTitle: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
     color: Colors.onYellowContainer,
   },
   detailApprovalWaSub: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
     color: Colors.onYellowContainer,
     lineHeight: 16,
   },
@@ -914,7 +908,7 @@ const styles = StyleSheet.create({
   },
   detailRequestWaBtnText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
     color: Colors.white,
   },
   detailModalFooter: {

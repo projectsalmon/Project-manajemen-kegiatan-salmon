@@ -17,7 +17,7 @@ import { DatePickerModal } from '../components/DatePickerModal';
 import { LocationSettingsModal } from '../components/LocationSettingsModal';
 import { TimePickerModal } from '../components/TimePickerModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
-import { CategoryMeta, Colors, FontFamily } from '../constants/theme';
+import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ActivityCategoryType, ActivityItem, LocationPresetItem } from '../types';
 import { buildActivityApprovalMessage } from '../utils/whatsappHelpers';
@@ -941,8 +941,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   topAppBarTitle: {
-    fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 17,
+    fontWeight: '700',
     color: Colors.textNavyDark,
   },
   scrollView: {
@@ -958,12 +958,11 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
     color: Colors.textNavyDark,
   },
   fieldSubLabel: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
   },
   textInput: {
@@ -972,7 +971,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 13,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -999,7 +997,7 @@ const styles = StyleSheet.create({
   },
   dropdownSelectorText: {
     fontSize: 13,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
     color: Colors.textNavyDark,
   },
   customCategoryCard: {
@@ -1018,7 +1016,7 @@ const styles = StyleSheet.create({
   },
   customCategoryLabel: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
     color: '#4F46E5',
   },
   customCategoryInput: {
@@ -1027,7 +1025,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 13,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
     borderWidth: 1,
     borderColor: '#A5B4FC',

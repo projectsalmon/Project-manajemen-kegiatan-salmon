@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { openWhatsApp } from '../utils/whatsappHelpers';
 
@@ -259,12 +259,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   modalSubtitle: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
@@ -290,13 +291,14 @@ const styles = StyleSheet.create({
   },
   calloutText: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.onYellowContainer,
     flex: 1,
     lineHeight: 18,
   },
   boldText: {
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
   },
   recipientCard: {
     backgroundColor: Colors.skyBlueBackground,
@@ -313,14 +315,16 @@ const styles = StyleSheet.create({
   },
   recipientLabel: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   editPhoneTriggerText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
   },
   recipientInfoRow: {
@@ -340,7 +344,8 @@ const styles = StyleSheet.create({
   },
   recipientAvatarText: {
     fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.skyBlueHeader,
   },
   recipientDetails: {
@@ -348,12 +353,13 @@ const styles = StyleSheet.create({
   },
   recipientName: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   recipientRole: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavySecondary,
     marginTop: 1,
   },
@@ -370,7 +376,8 @@ const styles = StyleSheet.create({
   },
   phoneNumberText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavyDark,
   },
   phoneInputBox: {
@@ -381,7 +388,8 @@ const styles = StyleSheet.create({
   },
   phoneInputLabel: {
     fontSize: 11,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavySecondary,
     marginBottom: 4,
   },
@@ -391,7 +399,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 12,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyDark,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -412,8 +420,9 @@ const styles = StyleSheet.create({
   },
   contactChipText: {
     fontSize: 10,
-    fontFamily: FontFamily.semiBold,
     color: Colors.textNavyDark,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
   },
   previewBoxContainer: {
     backgroundColor: '#F8FAFC',
@@ -430,7 +439,8 @@ const styles = StyleSheet.create({
   },
   previewBoxLabel: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavySecondary,
   },
   messageBubble: {
@@ -444,7 +454,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
     color: '#064E3B',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Fonts.bodyRegular,
   },
   modalActions: {
     marginTop: 12,
@@ -462,7 +472,8 @@ const styles = StyleSheet.create({
   },
   sendWhatsAppButtonText: {
     fontSize: 14,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.white,
   },
   laterButton: {
@@ -470,8 +481,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   laterButtonText: {
-    fontSize: 12,
-    fontFamily: FontFamily.semiBold,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavyMuted,
   },
 });

@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors, Fonts } from '../constants/theme';
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -361,7 +361,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   closeBtn: {
@@ -385,7 +386,8 @@ const styles = StyleSheet.create({
   },
   modeTabBtnText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavySecondary,
   },
   modeTabBtnTextActive: {
@@ -408,7 +410,8 @@ const styles = StyleSheet.create({
   },
   timeSectionLabel: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavyMuted,
     marginBottom: 6,
   },
@@ -426,18 +429,21 @@ const styles = StyleSheet.create({
   },
   timeValueText: {
     fontSize: 22,
-    fontFamily: FontFamily.headingExtraBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
     marginVertical: 2,
   },
   timeUnitSub: {
     fontSize: 9,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavyMuted,
   },
   timeColon: {
     fontSize: 22,
-    fontFamily: FontFamily.headingExtraBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.skyBlueHeader,
     marginHorizontal: 4,
     marginTop: -14,
@@ -448,12 +454,14 @@ const styles = StyleSheet.create({
   },
   rangeDividerText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
   },
   presetsHeaderTitle: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
     marginBottom: 8,
   },
@@ -476,12 +484,13 @@ const styles = StyleSheet.create({
   },
   presetLabelText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavyDark,
   },
   presetDescText: {
     fontSize: 10,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavyMuted,
   },
   selectedPreviewBox: {
@@ -499,7 +508,8 @@ const styles = StyleSheet.create({
   selectedPreviewText: {
     flex: 1,
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.skyBlueHeader,
   },
   actionsRow: {
@@ -518,7 +528,8 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 13,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavySecondary,
   },
   confirmBtn: {
@@ -534,7 +545,8 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.onYellowContainer,
   },
 });

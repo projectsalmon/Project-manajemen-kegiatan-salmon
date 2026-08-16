@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface VerificationModalProps {
@@ -206,14 +206,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontFamily: FontFamily.headingExtraBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
     textAlign: 'center',
     marginBottom: 6,
   },
   description: {
     fontSize: 13,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavySecondary,
     textAlign: 'center',
     lineHeight: 18,
@@ -237,7 +238,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     fontSize: 15,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
     letterSpacing: 1.5,
   },
@@ -254,9 +256,10 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    fontFamily: FontFamily.semiBold,
     color: Colors.urgentRed,
     flex: 1,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
   },
   askRtButton: {
     flexDirection: 'row',
@@ -267,7 +270,8 @@ const styles = StyleSheet.create({
   },
   askRtButtonText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: '#128C7E',
     textDecorationLine: 'underline',
   },
@@ -284,7 +288,8 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 13,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavyMuted,
   },
   verifyBtn: {
@@ -299,8 +304,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   verifyBtnText: {
-    fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.onYellowContainer,
   },
 });

@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors, Fonts } from '../constants/theme';
 
 interface DatePickerModalProps {
   visible: boolean;
@@ -331,7 +331,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   closeBtn: {
@@ -352,7 +353,8 @@ const styles = StyleSheet.create({
   },
   presetChipText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
   },
   monthNavRow: {
@@ -372,7 +374,8 @@ const styles = StyleSheet.create({
   },
   monthYearText: {
     fontSize: 15,
-    fontFamily: FontFamily.headingBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   weekHeaderRow: {
@@ -384,8 +387,9 @@ const styles = StyleSheet.create({
   weekDayText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavyMuted,
   },
   daysGrid: {
@@ -410,12 +414,14 @@ const styles = StyleSheet.create({
   },
   dayCellText: {
     fontSize: 13,
-    fontFamily: FontFamily.regular,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavyDark,
   },
   dayCellTextSelected: {
     color: Colors.white,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
   },
   selectedPreviewBox: {
     flexDirection: 'row',
@@ -432,7 +438,8 @@ const styles = StyleSheet.create({
   selectedPreviewText: {
     flex: 1,
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
   },
   actionsRow: {
@@ -451,7 +458,8 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 13,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontFamily: Fonts.bodySemiBold,
     color: Colors.textNavySecondary,
   },
   confirmBtn: {
@@ -467,7 +475,8 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.onYellowContainer,
   },
 });

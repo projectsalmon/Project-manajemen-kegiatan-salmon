@@ -52,20 +52,6 @@ export const Colors = {
   whatsappGreenBg: '#DCF8C6',
 };
 
-export const FontFamily = {
-  // Headings & Titles (Geometric modern pairing: Plus Jakarta Sans)
-  headingSemiBold: 'PlusJakartaSans_600SemiBold',
-  headingBold: 'PlusJakartaSans_700Bold',
-  headingExtraBold: 'PlusJakartaSans_800ExtraBold',
-
-  // Body & UI (Highly legible clean civic font: Open Sans)
-  regular: 'OpenSans_400Regular',
-  medium: 'OpenSans_500Medium',
-  semiBold: 'OpenSans_600SemiBold',
-  bold: 'OpenSans_700Bold',
-  extraBold: 'OpenSans_800ExtraBold',
-};
-
 export const UserRolesMeta: Record<UserRoleType, UserRoleInfo> = {
   WARGA: {
     code: 'WARGA',
@@ -229,4 +215,20 @@ export const UrgencyMeta: Record<
     badgeColor: Colors.urgentRed,
     containerColor: Colors.urgentRedContainer,
   },
+};
+
+export const Fonts = {
+  // Heading & Brand Accent: Plus Jakarta Sans (Modern Geometric, Civic & Government Tech Standard)
+  headingRegular: 'PlusJakartaSans_500Medium',
+  headingSemiBold: 'PlusJakartaSans_600SemiBold',
+  headingBold: 'PlusJakartaSans_700Bold',
+  headingExtraBold: 'PlusJakartaSans_800ExtraBold',
+
+  // Body & UI Content: Open Sans (Humanist Sans-Serif, Supreme Readability)
+  bodyRegular: 'OpenSans_400Regular',
+  bodyMedium: 'OpenSans_500Medium',
+  bodySemiBold: 'OpenSans_600SemiBold',
+  bodyBold: 'OpenSans_700Bold',
+  bodyExtraBold: 'OpenSans_800ExtraBold',
+  bodyItalic: 'OpenSans_400Regular_Italic',
 };

@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
 import { VerificationModal } from '../components/VerificationModal';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { RsvpStatusType } from '../types';
 
@@ -277,8 +277,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   topAppBarTitle: {
-    fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 17,
+    fontWeight: '700',
     color: Colors.textNavyDark,
     marginLeft: 4,
   },
@@ -305,8 +305,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   monthTitle: {
-    fontSize: 17,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 18,
+    fontWeight: '800',
     color: Colors.skyBlueHeader,
   },
   chevronGroup: {
@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
   dayOfWeekText: {
     width: 36,
     textAlign: 'center',
-    fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontSize: 12,
+    fontWeight: '700',
     color: Colors.textNavyMuted,
   },
   gridContainer: {
@@ -351,15 +351,13 @@ const styles = StyleSheet.create({
   },
   dayNumberText: {
     fontSize: 13,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyDark,
   },
   dayNumberBold: {
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
   },
   dayNumberSelected: {
     color: Colors.onYellowContainer,
-    fontFamily: FontFamily.bold,
   },
   activityDot: {
     width: 5,
@@ -375,13 +373,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   agendaTitle: {
-    fontSize: 15,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 16,
+    fontWeight: '700',
     color: Colors.textNavyDark,
   },
   agendaSubtitle: {
-    fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontSize: 12,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
@@ -399,13 +396,12 @@ const styles = StyleSheet.create({
   },
   emptyCardTitle: {
     fontSize: 14,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
     color: Colors.textNavyDark,
     marginTop: 8,
   },
   emptyCardSub: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     textAlign: 'center',
     marginTop: 2,

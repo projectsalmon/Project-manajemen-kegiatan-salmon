@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { LocationPresetItem } from '../types';
 
@@ -332,12 +332,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontFamily: FontFamily.headingBold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   modalSubtitle: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyMuted,
     marginTop: 1,
   },
@@ -357,8 +358,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   addNewTriggerText: {
-    fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
   },
   formCard: {
@@ -377,17 +379,20 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.skyBlueHeader,
   },
   formCancelText: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.urgentRed,
   },
   inputLabel: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.textNavyDark,
     marginBottom: 4,
     marginTop: 6,
@@ -398,7 +403,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 12,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyDark,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -415,12 +420,14 @@ const styles = StyleSheet.create({
   },
   saveFormBtnText: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.onYellowContainer,
   },
   listSectionTitle: {
     fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
     marginBottom: 8,
     textTransform: 'uppercase',
@@ -441,7 +448,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavyMuted,
   },
   locationItemCard: {
@@ -472,12 +479,13 @@ const styles = StyleSheet.create({
   },
   locationItemName: {
     fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
   },
   locationItemAddress: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavySecondary,
     marginTop: 1,
   },
@@ -505,8 +513,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   closeFooterBtnText: {
-    fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.white,
   },
 });

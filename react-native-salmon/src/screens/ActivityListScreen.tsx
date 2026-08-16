@@ -11,7 +11,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
 import { VerificationModal } from '../components/VerificationModal';
-import { CategoryMeta, Colors, FontFamily } from '../constants/theme';
+import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ActivityCategoryType, ActivityItem, RsvpStatusType } from '../types';
 
@@ -351,13 +351,13 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
     color: Colors.textNavyDark,
     includeFontPadding: false,
   },
   chipTextActive: {
     color: Colors.onYellowContainer,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
   },
   regionFilterScrollView: {
     flexGrow: 0,
@@ -390,12 +390,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     color: Colors.textNavyDark,
-    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
     includeFontPadding: false,
   },
   regionChipTextActive: {
     color: Colors.onYellowContainer,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
   },
   divider: {
     height: 1,
@@ -413,14 +413,13 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   emptyTitle: {
-    fontSize: 15,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 16,
+    fontWeight: '700',
     color: Colors.textNavyDark,
     marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     textAlign: 'center',
     marginTop: 4,
@@ -433,8 +432,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   resetButtonText: {
-    fontSize: 12,
-    fontFamily: FontFamily.bold,
+    fontSize: 13,
+    fontWeight: '700',
     color: Colors.onYellowContainer,
   },
   fabButton: {
@@ -455,8 +454,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: {
-    fontSize: 13,
-    fontFamily: FontFamily.bold,
+    fontSize: 14,
+    fontWeight: '700',
     color: Colors.onYellowContainer,
   },
 });

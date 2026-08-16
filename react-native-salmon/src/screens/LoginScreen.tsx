@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { Colors, FontFamily } from '../constants/theme';
+import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -189,14 +189,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   appTitle: {
-    fontSize: 25,
-    fontFamily: FontFamily.headingExtraBold,
+    fontSize: 26,
+    fontWeight: '800',
     color: Colors.textNavyDark,
     textAlign: 'center',
   },
   appSubtitle: {
     fontSize: 14,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavySecondary,
     textAlign: 'center',
     marginTop: 4,
@@ -237,8 +236,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   googleButtonText: {
-    fontSize: 15,
-    fontFamily: FontFamily.bold,
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1E293B',
   },
   dividerRow: {
@@ -255,8 +254,8 @@ const styles = StyleSheet.create({
   dividerText: {
     paddingHorizontal: 12,
     fontSize: 12,
-    fontFamily: FontFamily.medium,
     color: Colors.textNavyMuted,
+    fontWeight: '600',
   },
   directEnterButton: {
     width: '100%',
@@ -271,13 +270,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   directEnterButtonText: {
-    fontSize: 14,
-    fontFamily: FontFamily.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: Colors.onYellowContainer,
   },
   versionText: {
     fontSize: 12,
-    fontFamily: FontFamily.regular,
     color: Colors.textNavyMuted,
     marginTop: 8,
     marginBottom: 20,

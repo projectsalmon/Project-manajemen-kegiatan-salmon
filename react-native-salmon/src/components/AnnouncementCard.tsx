@@ -9,12 +9,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import {
-  ApprovalStatusMeta,
-  Colors,
-  FontFamily,
-  UrgencyMeta,
-} from '../constants/theme';
+import { ApprovalStatusMeta, Colors, Fonts, UrgencyMeta } from '../constants/theme';
 import { AnnouncementItem } from '../types';
 
 interface AnnouncementCardProps {
@@ -237,7 +232,7 @@ const styles = StyleSheet.create({
   },
   approvalBadgeText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
   },
   shareOverlayButton: {
     position: 'absolute',
@@ -272,7 +267,8 @@ const styles = StyleSheet.create({
   },
   urgencyTagText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     includeFontPadding: false,
   },
   pinnedTag: {
@@ -282,7 +278,8 @@ const styles = StyleSheet.create({
   },
   pinnedTagText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.yellowAccent,
     includeFontPadding: false,
   },
@@ -295,21 +292,22 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   dateText: {
-    fontSize: 11,
-    fontFamily: FontFamily.medium,
+    fontSize: 12,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyMuted,
     includeFontPadding: false,
   },
   titleText: {
-    fontSize: 15,
-    fontFamily: FontFamily.headingBold,
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
-    lineHeight: 21,
+    lineHeight: 22,
     marginBottom: 6,
   },
   contentText: {
     fontSize: 13,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyRegular,
     color: Colors.textNavySecondary,
     lineHeight: 19,
     marginBottom: 8,
@@ -337,7 +335,8 @@ const styles = StyleSheet.create({
   },
   reqChipText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.onYellowContainer,
     includeFontPadding: false,
   },
@@ -349,14 +348,15 @@ const styles = StyleSheet.create({
   },
   authorText: {
     fontSize: 11,
-    fontFamily: FontFamily.regular,
+    fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyMuted,
     flexShrink: 1,
     includeFontPadding: false,
   },
   readMoreText: {
     fontSize: 11,
-    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontFamily: Fonts.bodyBold,
     color: Colors.skyBlueHeader,
     includeFontPadding: false,
   },
