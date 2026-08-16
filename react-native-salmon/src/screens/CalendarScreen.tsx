@@ -9,8 +9,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
+import { VerificationModal } from '../components/VerificationModal';
 import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import { RsvpStatusType } from '../types';
 
 interface CalendarScreenProps {
   route?: any;
@@ -20,6 +22,24 @@ interface CalendarScreenProps {
 export const CalendarScreen: React.FC<CalendarScreenProps> = ({ route, navigation }) => {
   const { currentUser, activities, updateRsvpStatus } = useApp();
   const [selectedDay, setSelectedDay] = useState(18);
+  const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
+  const [pendingActivityRsvp, setPendingActivityRsvp] = useState<{ id: string; status: RsvpStatusType } | null>(null);
+
+  const handleRsvpWithVerification = (activityId: string, newStatus: RsvpStatusType) => {
+    if (currentUser.role === 'WARGA' && !currentUser.isVerifiedWarga && newStatus !== 'NONE') {
+      setPendingActivityRsvp({ id: activityId, status: newStatus });
+      setIsVerificationModalVisible(true);
+      return;
+    }
+    updateRsvpStatus(activityId, newStatus);
+  };
+
+  const handleVerificationSuccess = () => {
+    if (pendingActivityRsvp) {
+      updateRsvpStatus(pendingActivityRsvp.id, pendingActivityRsvp.status);
+      setPendingActivityRsvp(null);
+    }
+  };
 
   const isTabScreen = route?.name === 'KalenderTab';
   const isAdmin = currentUser.role !== 'WARGA';
@@ -194,10 +214,17 @@ export const CalendarScreen: React.FC<CalendarScreenProps> = ({ route, navigatio
                   activityId: act.id,
                 })
               }
-              onRsvpClick={(newStatus) => updateRsvpStatus(act.id, newStatus)}
+              onRsvpClick={(newStatus) => handleRsvpWithVerification(act.id, newStatus)}
             />
           ))
         )}
+
+      {/* Verification Modal */}
+      <VerificationModal
+        visible={isVerificationModalVisible}
+        onClose={() => setIsVerificationModalVisible(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </ScrollView>
   );
 

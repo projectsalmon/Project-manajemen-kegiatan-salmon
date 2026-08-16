@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
 import { AnnouncementCard } from '../components/AnnouncementCard';
+import { VerificationModal } from '../components/VerificationModal';
 import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
@@ -18,6 +19,7 @@ interface WargaHomeScreenProps {
 
 export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) => {
   const { currentUser, activities, announcements, updateRsvpStatus } = useApp();
+  const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
 
   // Warga only sees PUBLISHED activities and announcements
   const publishedActivities = activities.filter((a) => a.approvalStatus === 'PUBLISHED');
@@ -74,6 +76,36 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
           </View>
         </View>
       </View>
+
+      {/* UNVERIFIED RESIDENT ALERT BANNER */}
+      {!currentUser.isVerifiedWarga && (
+        <TouchableOpacity
+          style={styles.unverifiedBanner}
+          activeOpacity={0.9}
+          onPress={() => setIsVerificationModalVisible(true)}
+        >
+          <View style={styles.unverifiedBannerIcon}>
+            <MaterialCommunityIcons
+              name="shield-alert"
+              size={24}
+              color={Colors.onYellowContainer}
+            />
+          </View>
+          <View style={styles.unverifiedBannerContent}>
+            <Text style={styles.unverifiedBannerTitle}>
+              Belum Terverifikasi Warga
+            </Text>
+            <Text style={styles.unverifiedBannerText}>
+              Masukkan kode wilayah RT Anda untuk membuka akses RSVP kegiatan.
+            </Text>
+          </View>
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={22}
+            color={Colors.onYellowContainer}
+          />
+        </TouchableOpacity>
+      )}
 
       {/* 2. QUICK SHORTCUTS ROW */}
       <View style={styles.shortcutsRow}>
@@ -151,6 +183,12 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
           onRsvpClick={(newStatus) => updateRsvpStatus(activity.id, newStatus)}
         />
       ))}
+
+      {/* Verification Modal */}
+      <VerificationModal
+        visible={isVerificationModalVisible}
+        onClose={() => setIsVerificationModalVisible(false)}
+      />
     </ScrollView>
   );
 };
@@ -163,6 +201,40 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 110,
+  },
+  unverifiedBanner: {
+    backgroundColor: Colors.yellowContainer,
+    borderWidth: 1.5,
+    borderColor: Colors.yellowBorderLis,
+    borderRadius: 16,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+    elevation: 1,
+  },
+  unverifiedBannerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unverifiedBannerContent: {
+    flex: 1,
+  },
+  unverifiedBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.onYellowContainer,
+  },
+  unverifiedBannerText: {
+    fontSize: 11,
+    color: Colors.onYellowContainer,
+    marginTop: 2,
+    lineHeight: 15,
   },
   heroCard: {
     backgroundColor: Colors.skyBlueHeader,

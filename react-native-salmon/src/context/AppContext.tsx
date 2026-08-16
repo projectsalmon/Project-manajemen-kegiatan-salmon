@@ -7,12 +7,14 @@ import {
   AnnouncementUrgencyType,
   ApprovalStatusType,
   ContactItem,
+  RegionInvitationCode,
   RsvpStatusType,
   UserProfile,
   UserRoleType,
 } from '../types';
 import {
   defaultContacts,
+  defaultRegionCodes,
   defaultUserProfile,
   sampleActivities,
   sampleAnnouncements,
@@ -22,6 +24,7 @@ const STORAGE_KEYS = {
   ACTIVITIES: '@salmon_activities_v2',
   ANNOUNCEMENTS: '@salmon_announcements_v2',
   CONTACTS: '@salmon_contacts_v2',
+  REGION_CODES: '@salmon_region_codes_v2',
   USER_PROFILE: '@salmon_profile_v2',
 };
 
@@ -30,6 +33,7 @@ interface AppContextType {
   activities: ActivityItem[];
   announcements: AnnouncementItem[];
   contacts: ContactItem[];
+  regionCodes: RegionInvitationCode[];
   selectedCategoryFilter: ActivityCategoryType | null;
   setSelectedCategoryFilter: (cat: ActivityCategoryType | null) => void;
   selectedRegionFilter: string;
@@ -42,6 +46,16 @@ interface AppContextType {
   switchRole: (newRole: UserRoleType) => void;
   updateProfile: (updatedData: Partial<UserProfile>) => void;
   loginWithGoogleProfile: (profile: { email: string; name: string; photoUrl?: string }) => void;
+  createOrUpdateRegionCode: (params: {
+    code: string;
+    description: string;
+    rt?: string;
+    rw?: string;
+  }) => { success: boolean; message: string };
+  toggleRegionCodeStatus: (codeId: string) => void;
+  deleteRegionCode: (codeId: string) => void;
+  verifyUserWithCode: (inputCode: string) => { success: boolean; message: string };
+  removeVerification: () => void;
   updateRsvpStatus: (activityId: string, newStatus: RsvpStatusType) => void;
   addActivity: (params: {
     title: string;
@@ -112,6 +126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activities, setActivities] = useState<ActivityItem[]>(sampleActivities);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>(sampleAnnouncements);
   const [contacts, setContacts] = useState<ContactItem[]>(defaultContacts);
+  const [regionCodes, setRegionCodes] = useState<RegionInvitationCode[]>(defaultRegionCodes);
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ActivityCategoryType | null>(
     null
@@ -135,6 +150,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const storedContacts = await AsyncStorage.getItem(STORAGE_KEYS.CONTACTS);
         if (storedContacts) setContacts(JSON.parse(storedContacts));
+
+        const storedRegionCodes = await AsyncStorage.getItem(STORAGE_KEYS.REGION_CODES);
+        if (storedRegionCodes) setRegionCodes(JSON.parse(storedRegionCodes));
       } catch (e) {
         console.warn('Gagal memuat data dari AsyncStorage:', e);
       }
@@ -182,6 +200,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const persistRegionCodes = async (items: RegionInvitationCode[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.REGION_CODES, JSON.stringify(items));
+    } catch (e) {
+      console.warn('Gagal menyimpan kode wilayah:', e);
+    }
+  };
+
   const updateProfile = (updatedData: Partial<UserProfile>) => {
     setCurrentUser((prev) => {
       const updated: UserProfile = {
@@ -192,6 +218,145 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
     showToast('Profil berhasil disimpan!');
+  };
+
+  const createOrUpdateRegionCode = (params: {
+    code: string;
+    description: string;
+    rt?: string;
+    rw?: string;
+  }) => {
+    const cleanCode = params.code.trim().toUpperCase().replace(/\s+/g, '-');
+    if (cleanCode.length < 4) {
+      showToast('Kode wilayah minimal 4 karakter!');
+      return { success: false, message: 'Kode wilayah minimal 4 karakter!' };
+    }
+
+    const isRoleRw = currentUser.role === 'RW';
+    const roleType: 'RT' | 'RW' = isRoleRw ? 'RW' : 'RT';
+    const rtValue = isRoleRw ? 'Semua RT' : (params.rt || currentUser.rt || '03');
+    const rwValue = params.rw || currentUser.rw || '05';
+
+    const existingIndex = regionCodes.findIndex(
+      (rc) => rc.code.toUpperCase() === cleanCode
+    );
+
+    let updatedCodes: RegionInvitationCode[];
+
+    if (existingIndex >= 0) {
+      updatedCodes = regionCodes.map((rc, idx) =>
+        idx === existingIndex
+          ? {
+              ...rc,
+              description: params.description || rc.description,
+              rt: rtValue,
+              rw: rwValue,
+              isActive: true,
+            }
+          : rc
+      );
+    } else {
+      const newRegionCode: RegionInvitationCode = {
+        id: `RC-${Date.now() % 10000}`,
+        code: cleanCode,
+        role: roleType,
+        creatorName: currentUser.name,
+        rt: rtValue,
+        rw: rwValue,
+        kelurahan: currentUser.kelurahan || 'Sukamaju',
+        description:
+          params.description ||
+          `Kode Resmi Warga Lingkungan RT ${rtValue} / RW ${rwValue}`,
+        createdAt: 'Hari Ini',
+        isActive: true,
+        membersCount: 0,
+      };
+      updatedCodes = [newRegionCode, ...regionCodes];
+    }
+
+    setRegionCodes(updatedCodes);
+    persistRegionCodes(updatedCodes);
+    showToast(`Kode wilayah ${cleanCode} berhasil dibuat & diaktifkan!`);
+    return { success: true, message: `Kode ${cleanCode} siap dibagikan ke warga!` };
+  };
+
+  const toggleRegionCodeStatus = (codeId: string) => {
+    setRegionCodes((prev) => {
+      const updated = prev.map((rc) =>
+        rc.id === codeId ? { ...rc, isActive: !rc.isActive } : rc
+      );
+      persistRegionCodes(updated);
+      return updated;
+    });
+    showToast('Status keaktifan kode berhasil diubah.');
+  };
+
+  const deleteRegionCode = (codeId: string) => {
+    setRegionCodes((prev) => {
+      const updated = prev.filter((rc) => rc.id !== codeId);
+      persistRegionCodes(updated);
+      return updated;
+    });
+    showToast('Kode wilayah telah dihapus.');
+  };
+
+  const verifyUserWithCode = (inputCode: string) => {
+    const cleanCode = inputCode.trim().toUpperCase();
+    if (!cleanCode) {
+      showToast('Silakan masukkan kode wilayah!');
+      return { success: false, message: 'Silakan masukkan kode wilayah!' };
+    }
+
+    const match = regionCodes.find(
+      (rc) => rc.code.trim().toUpperCase() === cleanCode && rc.isActive
+    );
+
+    if (!match) {
+      showToast('Kode wilayah tidak ditemukan atau tidak aktif.');
+      return {
+        success: false,
+        message: 'Kode undangan tidak ditemukan atau sudah tidak aktif. Silakan tanyakan ke Ketua RT/RW Anda.',
+      };
+    }
+
+    // Update current user to verified
+    const updatedUser: UserProfile = {
+      ...currentUser,
+      isVerifiedWarga: true,
+      verifiedCode: match.code,
+      verifiedAt: 'Hari Ini',
+      rt: match.rt !== 'Semua RT' ? match.rt : currentUser.rt,
+      rw: match.rw,
+      kelurahan: match.kelurahan,
+    };
+
+    setCurrentUser(updatedUser);
+    persistProfile(updatedUser);
+
+    // Increment members count
+    const updatedRegionCodes = regionCodes.map((rc) =>
+      rc.id === match.id ? { ...rc, membersCount: (rc.membersCount || 0) + 1 } : rc
+    );
+    setRegionCodes(updatedRegionCodes);
+    persistRegionCodes(updatedRegionCodes);
+
+    showToast(`Selamat! Terverifikasi sebagai warga RT ${updatedUser.rt} / RW ${updatedUser.rw}`);
+    return {
+      success: true,
+      message: `Berhasil terverifikasi di wilayah ${match.description}!`,
+    };
+  };
+
+  const removeVerification = () => {
+    const updatedUser: UserProfile = {
+      ...currentUser,
+      isVerifiedWarga: false,
+      verifiedCode: undefined,
+      verifiedAt: undefined,
+    };
+    setCurrentUser(updatedUser);
+    persistProfile(updatedUser);
+    showToast('Status verifikasi wilayah direset (belum terverifikasi).');
   };
 
   const switchRole = (newRole: UserRoleType) => {
@@ -211,15 +376,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updatedProfile: UserProfile = {
       id: profile.email,
-      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga Sukamaju'),
-      nik: isAdmin ? '3201012345670001' : '3201019876540002',
+      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga Baru Sukamaju'),
+      nik: isAdmin ? '3201012345670001' : '',
       email: profile.email,
-      phone: '081234567890',
+      phone: '',
       role: assignedRole,
-      rt: '002',
+      rt: isAdmin ? '002' : '03',
       rw: '005',
       kelurahan: 'Sukamaju',
       avatarUrl: profile.photoUrl || undefined,
+      isVerifiedWarga: isAdmin,
     };
 
     setCurrentUser(updatedProfile);
@@ -228,6 +394,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateRsvpStatus = (activityId: string, newStatus: RsvpStatusType) => {
+    if (currentUser.role === 'WARGA' && !currentUser.isVerifiedWarga && newStatus !== 'NONE') {
+      showToast('⚠️ Reservasi terkunci! Masukkan kode undangan RT Anda di Profil terlebih dahulu.');
+      return;
+    }
+
     setActivities((prevActivities) => {
       const updated = prevActivities.map((item) => {
         if (item.id !== activityId) return item;
@@ -619,6 +790,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activities,
         announcements,
         contacts,
+        regionCodes,
         selectedCategoryFilter,
         setSelectedCategoryFilter,
         selectedRegionFilter,
@@ -631,6 +803,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchRole,
         updateProfile,
         loginWithGoogleProfile,
+        createOrUpdateRegionCode,
+        toggleRegionCodeStatus,
+        deleteRegionCode,
+        verifyUserWithCode,
+        removeVerification,
         updateRsvpStatus,
         addActivity,
         updateActivity,

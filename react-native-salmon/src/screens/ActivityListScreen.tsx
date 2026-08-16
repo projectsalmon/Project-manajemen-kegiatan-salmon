@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
+import { VerificationModal } from '../components/VerificationModal';
 import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { ActivityCategoryType, ActivityItem } from '../types';
+import { ActivityCategoryType, ActivityItem, RsvpStatusType } from '../types';
 
 interface ActivityListScreenProps {
   navigation: any;
@@ -30,6 +31,24 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
+  const [pendingActivityRsvp, setPendingActivityRsvp] = useState<{ id: string; status: RsvpStatusType } | null>(null);
+
+  const handleRsvpWithVerification = (activityId: string, newStatus: RsvpStatusType) => {
+    if (currentUser.role === 'WARGA' && !currentUser.isVerifiedWarga && newStatus !== 'NONE') {
+      setPendingActivityRsvp({ id: activityId, status: newStatus });
+      setIsVerificationModalVisible(true);
+      return;
+    }
+    updateRsvpStatus(activityId, newStatus);
+  };
+
+  const handleVerificationSuccess = () => {
+    if (pendingActivityRsvp) {
+      updateRsvpStatus(pendingActivityRsvp.id, pendingActivityRsvp.status);
+      setPendingActivityRsvp(null);
+    }
+  };
 
   const isAdmin = currentUser.role !== 'WARGA';
   const categories: ActivityCategoryType[] = [
@@ -234,7 +253,7 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
                   activityId: item.id,
                 })
               }
-              onRsvpClick={(newStatus) => updateRsvpStatus(item.id, newStatus)}
+              onRsvpClick={(newStatus) => handleRsvpWithVerification(item.id, newStatus)}
               onEditClick={
                 isAdmin
                   ? () =>
@@ -263,6 +282,13 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
           <Text style={styles.fabText}>Buat Kegiatan</Text>
         </TouchableOpacity>
       )}
+
+      {/* 6. VERIFICATION MODAL */}
+      <VerificationModal
+        visible={isVerificationModalVisible}
+        onClose={() => setIsVerificationModalVisible(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </View>
   );
 };

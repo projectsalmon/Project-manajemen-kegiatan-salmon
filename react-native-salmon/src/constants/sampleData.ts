@@ -1,4 +1,4 @@
-import { ActivityItem, AnnouncementItem, ContactItem, UserProfile } from '../types';
+import { ActivityItem, AnnouncementItem, ContactItem, RegionInvitationCode, UserProfile } from '../types';
 
 export const defaultUserProfile: UserProfile = {
   id: 'USR-001',
@@ -13,7 +13,39 @@ export const defaultUserProfile: UserProfile = {
   phone: '0812-3456-7890',
   email: 'budi.santoso@warga.id',
   avatarUrl: '',
+  isVerifiedWarga: true,
+  verifiedCode: 'RT03MAJU',
+  verifiedAt: '12 Mei 2025',
 };
+
+export const defaultRegionCodes: RegionInvitationCode[] = [
+  {
+    id: 'RC-001',
+    code: 'RT03MAJU',
+    role: 'RT',
+    creatorName: 'Bpk. Bambang Wijaya (Ketua RT 03)',
+    rt: '03',
+    rw: '05',
+    kelurahan: 'Sukamaju',
+    description: 'Kode Resmi Warga Lingkungan RT 03 Sukamaju',
+    createdAt: '10 Mei 2025',
+    isActive: true,
+    membersCount: 24,
+  },
+  {
+    id: 'RC-002',
+    code: 'RW05SUKAMAJU',
+    role: 'RW',
+    creatorName: 'Bpk. Sutrisno (Ketua RW 05)',
+    rt: 'Semua RT',
+    rw: '05',
+    kelurahan: 'Sukamaju',
+    description: 'Kode Induk Warga Seluruh Lingkungan RW 05 Sukamaju',
+    createdAt: '01 Mei 2025',
+    isActive: true,
+    membersCount: 142,
+  },
+];
 
 export const defaultContacts: ContactItem[] = [
   {

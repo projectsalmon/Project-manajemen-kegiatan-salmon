@@ -8,6 +8,20 @@ export interface UserRoleInfo {
   badgeColor: string;
 }
 
+export interface RegionInvitationCode {
+  id: string;
+  code: string;
+  role: 'RT' | 'RW';
+  creatorName: string;
+  rt: string;
+  rw: string;
+  kelurahan: string;
+  description: string;
+  createdAt: string;
+  isActive: boolean;
+  membersCount: number;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -21,6 +35,9 @@ export interface UserProfile {
   phone: string;
   email: string;
   avatarUrl?: string;
+  isVerifiedWarga?: boolean;
+  verifiedCode?: string;
+  verifiedAt?: string;
 }
 
 export type ActivityCategoryType =

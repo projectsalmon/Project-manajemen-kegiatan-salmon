@@ -21,6 +21,7 @@ import {
   UserRolesMeta,
 } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import { VerificationModal } from '../components/VerificationModal';
 import { RsvpStatusType } from '../types';
 
 interface ActivityDetailScreenProps {
@@ -44,6 +45,26 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
 
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [isUploadPickerVisible, setIsUploadPickerVisible] = useState(false);
+  const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
+  const [pendingRsvpStatus, setPendingRsvpStatus] = useState<RsvpStatusType | null>(null);
+
+  const handleRsvpWithCheck = (newStatus: RsvpStatusType) => {
+    if (currentUser.role === 'WARGA' && !currentUser.isVerifiedWarga && newStatus !== 'NONE') {
+      setPendingRsvpStatus(newStatus);
+      setIsVerificationModalVisible(true);
+      return;
+    }
+    if (activity) {
+      updateRsvpStatus(activity.id, newStatus);
+    }
+  };
+
+  const handleVerificationSuccess = () => {
+    if (activity && pendingRsvpStatus) {
+      updateRsvpStatus(activity.id, pendingRsvpStatus);
+      setPendingRsvpStatus(null);
+    }
+  };
 
   const activity = activities.find((a) => a.id === activityId);
 
@@ -390,8 +411,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 : styles.actionRsvpBtnOutline,
             ]}
             onPress={() =>
-              updateRsvpStatus(
-                activity.id,
+              handleRsvpWithCheck(
                 currentRsvp === 'ATTENDING' ? 'NONE' : 'ATTENDING'
               )
             }
@@ -424,8 +444,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 : styles.actionRsvpBtnOutline,
             ]}
             onPress={() =>
-              updateRsvpStatus(
-                activity.id,
+              handleRsvpWithCheck(
                 currentRsvp === 'MAYBE' ? 'NONE' : 'MAYBE'
               )
             }
@@ -459,8 +478,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 : styles.actionRsvpBtnOutline,
             ]}
             onPress={() =>
-              updateRsvpStatus(
-                activity.id,
+              handleRsvpWithCheck(
                 currentRsvp === 'NOT_ATTENDING' ? 'NONE' : 'NOT_ATTENDING'
               )
             }
@@ -631,6 +649,13 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           </SafeAreaView>
         </View>
       </Modal>
+
+      {/* 7. VERIFICATION MODAL */}
+      <VerificationModal
+        visible={isVerificationModalVisible}
+        onClose={() => setIsVerificationModalVisible(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </SafeAreaView>
   );
 };

@@ -5,6 +5,7 @@ import {
   Linking,
   Modal,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -13,9 +14,10 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { VerificationModal } from '../components/VerificationModal';
 import { Colors, RsvpStatusMeta, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { ContactItem, UserRoleType } from '../types';
+import { ContactItem, RegionInvitationCode, UserRoleType } from '../types';
 
 interface ProfileScreenProps {
   navigation: any;
@@ -26,7 +28,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     currentUser,
     activities,
     contacts,
+    regionCodes,
     updateProfile,
+    createOrUpdateRegionCode,
+    toggleRegionCodeStatus,
+    deleteRegionCode,
+    removeVerification,
     addContact,
     updateContact,
     deleteContact,
@@ -47,6 +54,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [editEmail, setEditEmail] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
 
+  // Verification Modal State (Warga)
+  const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
+
+  // Create / Edit Region Code Modal State (RT / RW)
+  const [isCreateCodeModalVisible, setIsCreateCodeModalVisible] = useState(false);
+  const [newCodeName, setNewCodeName] = useState('');
+  const [newCodeDesc, setNewCodeDesc] = useState('');
+  const [newCodeRt, setNewCodeRt] = useState('');
+  const [newCodeRw, setNewCodeRw] = useState('');
+
   // Contact Modal State
   const [isContactModalVisible, setIsContactModalVisible] = useState(false);
   const [editingContact, setEditingContact] = useState<ContactItem | null>(null);
@@ -56,6 +73,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const availableRoles: UserRoleType[] = ['WARGA', 'RT', 'RW', 'POSYANDU', 'STAF_KELURAHAN'];
   const isAdmin = currentUser.role !== 'WARGA';
+  const isRtOrRw = currentUser.role === 'RT' || currentUser.role === 'RW' || currentUser.role === 'STAF_KELURAHAN';
 
   // Filter activities with RSVP response
   const rsvpHistory = activities.filter((a) => a.userRsvpStatus !== 'NONE');
@@ -132,6 +150,50 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     });
 
     setIsEditProfileModalVisible(false);
+  };
+
+  // Region Code Handlers (RT / RW)
+  const handleOpenCreateCode = () => {
+    const isRw = currentUser.role === 'RW';
+    const defaultSuffix = isRw ? '05' : (currentUser.rt || '03');
+    const prefix = isRw ? 'RW' : 'RT';
+    setNewCodeName(`${prefix}${defaultSuffix}-MAJU`);
+    setNewCodeDesc(`Kode Resmi Warga Lingkungan ${prefix} ${defaultSuffix} Sukamaju`);
+    setNewCodeRt(isRw ? 'Semua RT' : (currentUser.rt || '03'));
+    setNewCodeRw(currentUser.rw || '05');
+    setIsCreateCodeModalVisible(true);
+  };
+
+  const handleSaveNewCode = () => {
+    if (!newCodeName.trim()) {
+      showToast('Kode wilayah tidak boleh kosong!');
+      return;
+    }
+
+    const res = createOrUpdateRegionCode({
+      code: newCodeName.trim(),
+      description: newCodeDesc.trim(),
+      rt: newCodeRt.trim(),
+      rw: newCodeRw.trim(),
+    });
+
+    if (res.success) {
+      setIsCreateCodeModalVisible(false);
+    }
+  };
+
+  const handleShareCodeWhatsApp = (item: RegionInvitationCode) => {
+    const msg =
+      `📢 *KODE UNDANGAN WARGA RESMI*\n` +
+      `Kepada warga lingkungan ${item.description}:\n\n` +
+      `Silakan masukkan kode berikut di aplikasi *Konek* untuk verifikasi domisili & akses reservasi kegiatan:\n\n` +
+      `🔑 *KODE: ${item.code}*\n\n` +
+      `Buka aplikasi Konek ➡️ Tab Profil ➡️ Masukkan Kode Undangan.`;
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    Linking.openURL(url).catch(() =>
+      Share.share({ message: msg, title: 'Kode Undangan Wilayah' })
+    );
   };
 
   // Contact modal handlers
@@ -248,10 +310,216 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* 2. RESIDENT & PERSONAL DATA INFO CARD */}
+      {/* 2. WARGA VERIFICATION STATUS CARD (Khusus Role Warga) */}
+      {currentUser.role === 'WARGA' && (
+        <View
+          style={[
+            styles.verificationCard,
+            currentUser.isVerifiedWarga
+              ? styles.verificationCardVerified
+              : styles.verificationCardUnverified,
+          ]}
+        >
+          <View style={styles.verificationHeader}>
+            <View style={styles.verificationIconBox}>
+              <MaterialCommunityIcons
+                name={currentUser.isVerifiedWarga ? 'shield-check' : 'shield-alert'}
+                size={28}
+                color={currentUser.isVerifiedWarga ? Colors.kesehatanGreen : Colors.yellowAccent}
+              />
+            </View>
+            <View style={styles.verificationTextGroup}>
+              <Text style={styles.verificationTitle}>
+                {currentUser.isVerifiedWarga
+                  ? 'Warga Sah Terverifikasi RT & RW'
+                  : 'Belum Terverifikasi Wilayah'}
+              </Text>
+              <Text style={styles.verificationSubtitle}>
+                {currentUser.isVerifiedWarga
+                  ? `Terverifikasi di RT ${currentUser.rt} / RW ${currentUser.rw} • Kode: ${currentUser.verifiedCode || 'RT03MAJU'}`
+                  : 'Masukkan kode undangan RT/RW untuk membuka akses reservasi kegiatan lingkungan.'}
+              </Text>
+            </View>
+          </View>
+
+          {currentUser.isVerifiedWarga ? (
+            <View style={styles.verifiedActionsRow}>
+              <TouchableOpacity
+                style={styles.reverifyButton}
+                activeOpacity={0.8}
+                onPress={() => setIsVerificationModalVisible(true)}
+              >
+                <MaterialCommunityIcons name="key-change" size={16} color={Colors.skyBlueHeader} />
+                <Text style={styles.reverifyButtonText}>Ganti / Input Kode Lain</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.resetVerificationBtn}
+                activeOpacity={0.8}
+                onPress={removeVerification}
+              >
+                <Text style={styles.resetVerificationBtnText}>Reset Uji Coba</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.verifyNowButton}
+              activeOpacity={0.85}
+              onPress={() => setIsVerificationModalVisible(true)}
+            >
+              <MaterialCommunityIcons
+                name="key-variant"
+                size={18}
+                color={Colors.onYellowContainer}
+              />
+              <Text style={styles.verifyNowButtonText}>
+                Masukkan Kode Undangan RT / RW
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* 3. MANAJEMEN KODE UNDANGAN WILAYAH (Khusus Role RT & RW & Kelurahan) */}
+      {isRtOrRw && (
+        <View style={styles.regionCodeManagementCard}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.headerLeftWithIcon}>
+              <MaterialCommunityIcons
+                name="key-star"
+                size={22}
+                color={Colors.skyBlueHeader}
+              />
+              <View>
+                <Text style={styles.cardHeaderTitle}>
+                  Kode Wilayah RT / RW
+                </Text>
+                <Text style={styles.cardHeaderSubtitle}>
+                  Bagikan ke warga agar otomatis terdaftar
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.addCodeHeaderBtn}
+              onPress={handleOpenCreateCode}
+            >
+              <MaterialCommunityIcons
+                name="plus"
+                size={18}
+                color={Colors.skyBlueHeader}
+              />
+              <Text style={styles.addCodeHeaderBtnText}>Buat Kode</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* List of Region Codes */}
+          {regionCodes.map((codeItem) => (
+            <View key={codeItem.id} style={styles.codeItemCard}>
+              <View style={styles.codeItemTopRow}>
+                <View style={styles.codeBadge}>
+                  <Text style={styles.codeBadgeText}>{codeItem.code}</Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.statusPill,
+                    {
+                      backgroundColor: codeItem.isActive
+                        ? Colors.kesehatanGreenContainer
+                        : Colors.urgentRedContainer,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusPillText,
+                      {
+                        color: codeItem.isActive
+                          ? Colors.kesehatanGreen
+                          : Colors.urgentRed,
+                      },
+                    ]}
+                  >
+                    {codeItem.isActive ? 'Aktif' : 'Non-Aktif'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.codeItemDesc}>{codeItem.description}</Text>
+
+              <View style={styles.codeItemMetaRow}>
+                <View style={styles.codeItemMeta}>
+                  <MaterialCommunityIcons
+                    name="account-group"
+                    size={14}
+                    color={Colors.skyBlueHeader}
+                  />
+                  <Text style={styles.codeItemMetaText}>
+                    {codeItem.membersCount || 0} Warga Bergabung
+                  </Text>
+                </View>
+
+                <View style={styles.codeItemMeta}>
+                  <MaterialCommunityIcons
+                    name="map-marker"
+                    size={14}
+                    color={Colors.textNavyMuted}
+                  />
+                  <Text style={styles.codeItemMetaText}>
+                    RT {codeItem.rt} / RW {codeItem.rw}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Action Buttons for Code */}
+              <View style={styles.codeItemActionsRow}>
+                <TouchableOpacity
+                  style={styles.shareWaCodeBtn}
+                  activeOpacity={0.8}
+                  onPress={() => handleShareCodeWhatsApp(codeItem)}
+                >
+                  <MaterialCommunityIcons
+                    name="whatsapp"
+                    size={16}
+                    color={Colors.white}
+                  />
+                  <Text style={styles.shareWaCodeBtnText}>
+                    Bagikan ke WhatsApp Warga
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.toggleActiveCodeBtn}
+                  onPress={() => toggleRegionCodeStatus(codeItem.id)}
+                >
+                  <MaterialCommunityIcons
+                    name={codeItem.isActive ? 'power' : 'power-standby'}
+                    size={18}
+                    color={codeItem.isActive ? Colors.urgentRed : Colors.kesehatanGreen}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.deleteCodeBtn}
+                  onPress={() => deleteRegionCode(codeItem.id)}
+                >
+                  <MaterialCommunityIcons
+                    name="delete-outline"
+                    size={18}
+                    color={Colors.textNavyMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* 4. RESIDENT & PERSONAL DATA INFO CARD */}
       <View style={styles.infoCard}>
         <View style={styles.infoCardHeaderRow}>
-          <Text style={styles.cardHeaderTitle}>Informasi Pribadi & Domisili</Text>
+          <Text style={styles.cardHeaderTitle}>Informasi Domisili & Profil</Text>
           <TouchableOpacity
             style={styles.headerEditLink}
             onPress={handleOpenEditProfile}
@@ -319,7 +587,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* 3. RIWAYAT RSVP SAYA */}
+      {/* 5. RIWAYAT RSVP SAYA */}
       <View style={styles.rsvpCard}>
         <View style={styles.cardHeaderRow}>
           <View style={styles.headerLeftWithIcon}>
@@ -398,7 +666,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         )}
       </View>
 
-      {/* 4. KONTAK PENTING WILAYAH */}
+      {/* 6. KONTAK PENTING WILAYAH */}
       <View style={styles.contactsCard}>
         <View style={styles.cardHeaderRow}>
           <View style={styles.headerLeftWithIcon}>
@@ -479,7 +747,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         ))}
       </View>
 
-      {/* 5. LOGOUT BUTTON */}
+      {/* 7. LOGOUT BUTTON */}
       <TouchableOpacity
         style={styles.logoutBtn}
         activeOpacity={0.85}
@@ -488,6 +756,116 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <MaterialCommunityIcons name="logout" size={20} color={Colors.white} />
         <Text style={styles.logoutBtnText}>Keluar dari Aplikasi</Text>
       </TouchableOpacity>
+
+      {/* MODAL: VERIFIKASI WARGA DENGAN KODE RT */}
+      <VerificationModal
+        visible={isVerificationModalVisible}
+        onClose={() => setIsVerificationModalVisible(false)}
+      />
+
+      {/* MODAL: BUAT / EDIT KODE WILAYAH RT/RW */}
+      <Modal
+        visible={isCreateCodeModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsCreateCodeModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.createCodeModalContainer}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalHeaderTitle}>Buat Kode Undangan Wilayah</Text>
+              <TouchableOpacity
+                onPress={() => setIsCreateCodeModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={Colors.textNavyDark}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalHelperText}>
+                Kode ini akan Anda bagikan ke warga di grup WhatsApp RT/RW. Warga yang
+                memasukkan kode ini akan otomatis terverifikasi.
+              </Text>
+
+              {/* Form: Kode Unik */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Kode Unik Wilayah *</Text>
+                <TextInput
+                  style={[styles.formInput, styles.codeUniqueInput]}
+                  placeholder="Contoh: RT03MAJU"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={newCodeName}
+                  onChangeText={(txt) => setNewCodeName(txt.toUpperCase().replace(/\s+/g, '-'))}
+                  autoCapitalize="characters"
+                />
+              </View>
+
+              {/* Form: Keterangan */}
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Keterangan / Nama Wilayah *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Contoh: Kode Resmi Warga RT 03 Sukamaju"
+                  placeholderTextColor={Colors.textNavyMuted}
+                  value={newCodeDesc}
+                  onChangeText={setNewCodeDesc}
+                />
+              </View>
+
+              {/* Form: Target RT & RW */}
+              <View style={styles.formRow}>
+                <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.formLabel}>Target RT</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="03 / Semua RT"
+                    placeholderTextColor={Colors.textNavyMuted}
+                    value={newCodeRt}
+                    onChangeText={setNewCodeRt}
+                  />
+                </View>
+
+                <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.formLabel}>Target RW</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="05"
+                    placeholderTextColor={Colors.textNavyMuted}
+                    value={newCodeRw}
+                    onChangeText={setNewCodeRw}
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooterActions}>
+              <TouchableOpacity
+                style={styles.cancelModalBtn}
+                onPress={() => setIsCreateCodeModalVisible(false)}
+              >
+                <Text style={styles.cancelModalBtnText}>Batal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.saveModalBtn}
+                onPress={handleSaveNewCode}
+              >
+                <MaterialCommunityIcons
+                  name="check-bold"
+                  size={18}
+                  color={Colors.onYellowContainer}
+                />
+                <Text style={styles.saveModalBtnText}>Simpan & Aktifkan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL: EDIT PROFIL LENGKAP */}
       <Modal
@@ -910,6 +1288,210 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.onYellowContainer,
   },
+  verificationCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
+  },
+  verificationCardVerified: {
+    borderColor: Colors.kesehatanGreen,
+    backgroundColor: '#F0FDF4',
+  },
+  verificationCardUnverified: {
+    borderColor: Colors.yellowBorderLis,
+    backgroundColor: '#FEFCE8',
+  },
+  verificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  verificationIconBox: {
+    marginTop: 2,
+  },
+  verificationTextGroup: {
+    flex: 1,
+  },
+  verificationTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textNavyDark,
+  },
+  verificationSubtitle: {
+    fontSize: 12,
+    color: Colors.textNavySecondary,
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  verifyNowButton: {
+    marginTop: 12,
+    backgroundColor: Colors.yellowContainer,
+    borderWidth: 1,
+    borderColor: Colors.yellowBorderLis,
+    borderRadius: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  verifyNowButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onYellowContainer,
+  },
+  verifiedActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  reverifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  reverifyButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+  },
+  resetVerificationBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  resetVerificationBtnText: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    textDecorationLine: 'underline',
+  },
+  regionCodeManagementCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.skyBlueBorder,
+  },
+  cardHeaderSubtitle: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    marginTop: 1,
+  },
+  addCodeHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.skyBlueSurfaceVariant,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    gap: 4,
+  },
+  addCodeHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+  },
+  codeItemCard: {
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  codeItemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  codeBadge: {
+    backgroundColor: Colors.skyBlueHeader,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  codeBadgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: 1.5,
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  codeItemDesc: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textNavyDark,
+    marginBottom: 6,
+  },
+  codeItemMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 10,
+  },
+  codeItemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  codeItemMetaText: {
+    fontSize: 11,
+    color: Colors.textNavySecondary,
+    fontWeight: '500',
+  },
+  codeItemActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shareWaCodeBtn: {
+    flex: 1,
+    backgroundColor: '#128C7E',
+    borderRadius: 10,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  shareWaCodeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  toggleActiveCodeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  deleteCodeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
   infoCard: {
     backgroundColor: Colors.white,
     borderRadius: 18,
@@ -1127,6 +1709,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     padding: 16,
+  },
+  createCodeModalContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    padding: 20,
+    elevation: 5,
+  },
+  modalHelperText: {
+    fontSize: 12,
+    color: Colors.textNavySecondary,
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+  codeUniqueInput: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: Colors.skyBlueHeader,
   },
   editProfileModalContainer: {
     backgroundColor: Colors.white,
