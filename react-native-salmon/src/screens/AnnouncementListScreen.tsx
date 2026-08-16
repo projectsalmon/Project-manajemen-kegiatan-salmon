@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AnnouncementCard } from '../components/AnnouncementCard';
+import { DatePickerModal } from '../components/DatePickerModal';
+import { TimePickerModal } from '../components/TimePickerModal';
 import { Colors, UrgencyMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { AnnouncementItem, AnnouncementUrgencyType } from '../types';
@@ -44,6 +46,13 @@ export const AnnouncementListScreen: React.FC = () => {
   const [formRequirements, setFormRequirements] = useState('');
   const [formAdditionalInfo, setFormAdditionalInfo] = useState('');
 
+  // Date & Time Picker states for Announcement
+  const [formDate, setFormDate] = useState('Minggu, 18 Mei 2025');
+  const [formDateIso, setFormDateIso] = useState('2025-05-18');
+  const [formTime, setFormTime] = useState('08:00 - 11:00 WIB');
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
+
   const isAdmin = currentUser.role !== 'WARGA';
   const urgencies: AnnouncementUrgencyType[] = [
     'PENTING',
@@ -75,6 +84,9 @@ export const AnnouncementListScreen: React.FC = () => {
     setFormTargetRegion('RW 05 Sukamaju');
     setFormRequirements('');
     setFormAdditionalInfo('');
+    setFormDate('Minggu, 18 Mei 2025');
+    setFormDateIso('2025-05-18');
+    setFormTime('08:00 - 11:00 WIB');
     setIsFormModalVisible(true);
   };
 
@@ -86,6 +98,9 @@ export const AnnouncementListScreen: React.FC = () => {
     setFormTargetRegion(ann.targetRegion);
     setFormRequirements(ann.requirements ? ann.requirements.join(', ') : '');
     setFormAdditionalInfo(ann.additionalInfo || '');
+    setFormDate(ann.formattedDate || 'Minggu, 18 Mei 2025');
+    setFormDateIso('2025-05-18');
+    setFormTime('08:00 - 11:00 WIB');
     setSelectedForDetail(null);
     setIsFormModalVisible(true);
   };
@@ -101,6 +116,8 @@ export const AnnouncementListScreen: React.FC = () => {
       .map((r) => r.trim())
       .filter((r) => r.length > 0);
 
+    const finalFormattedDate = `${formDate}${formTime ? ` • ${formTime}` : ''}`;
+
     if (editingAnnouncement) {
       updateAnnouncement(editingAnnouncement.id, {
         title: formTitle,
@@ -109,6 +126,7 @@ export const AnnouncementListScreen: React.FC = () => {
         targetRegion: formTargetRegion,
         requirements: reqList,
         additionalInfo: formAdditionalInfo || null,
+        formattedDate: finalFormattedDate,
       });
     } else {
       addAnnouncement({
@@ -118,6 +136,7 @@ export const AnnouncementListScreen: React.FC = () => {
         targetRegion: formTargetRegion,
         requirements: reqList,
         additionalInfo: formAdditionalInfo || null,
+        formattedDate: finalFormattedDate,
       });
     }
 
@@ -440,6 +459,53 @@ export const AnnouncementListScreen: React.FC = () => {
                 />
               </View>
 
+              {/* Date & Time Selectors for Announcement */}
+              <View style={styles.formRow}>
+                {/* Tanggal Picker */}
+                <View style={[styles.formField, { flex: 1, marginRight: 6 }]}>
+                  <Text style={styles.formLabel}>Tanggal Informasi *</Text>
+                  <TouchableOpacity
+                    style={styles.pickerSelectorBox}
+                    activeOpacity={0.8}
+                    onPress={() => setIsDatePickerVisible(true)}
+                  >
+                    <MaterialCommunityIcons
+                      name="calendar"
+                      size={18}
+                      color={Colors.skyBlueHeader}
+                    />
+                    <View style={styles.pickerSelectorInfo}>
+                      <Text style={styles.pickerSelectorPrimaryText} numberOfLines={1}>
+                        {formDate}
+                      </Text>
+                      <Text style={styles.pickerSelectorSubText}>{formDateIso}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Waktu Jam Picker */}
+                <View style={[styles.formField, { flex: 1, marginLeft: 6 }]}>
+                  <Text style={styles.formLabel}>Waktu / Jam</Text>
+                  <TouchableOpacity
+                    style={styles.pickerSelectorBox}
+                    activeOpacity={0.8}
+                    onPress={() => setIsTimePickerVisible(true)}
+                  >
+                    <MaterialCommunityIcons
+                      name="clock-time-four-outline"
+                      size={18}
+                      color={Colors.skyBlueHeader}
+                    />
+                    <View style={styles.pickerSelectorInfo}>
+                      <Text style={styles.pickerSelectorPrimaryText} numberOfLines={1}>
+                        {formTime}
+                      </Text>
+                      <Text style={styles.pickerSelectorSubText}>Ketuk ganti</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <View style={styles.formField}>
                 <Text style={styles.formLabel}>Tingkat Urgensi:</Text>
                 <View style={styles.urgencySelectRow}>
@@ -486,6 +552,27 @@ export const AnnouncementListScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* POPUP DATE PICKER MODAL */}
+      <DatePickerModal
+        visible={isDatePickerVisible}
+        initialDateIso={formDateIso}
+        title="Pilih Tanggal Pengumuman"
+        onClose={() => setIsDatePickerVisible(false)}
+        onSelectDate={(newIso, newFormatted) => {
+          setFormDateIso(newIso);
+          setFormDate(newFormatted);
+        }}
+      />
+
+      {/* POPUP TIME PICKER MODAL */}
+      <TimePickerModal
+        visible={isTimePickerVisible}
+        initialTime={formTime}
+        title="Pilih Jam Pengumuman"
+        onClose={() => setIsTimePickerVisible(false)}
+        onSelectTime={(newTime) => setFormTime(newTime)}
+      />
     </View>
   );
 };
@@ -740,6 +827,35 @@ const styles = StyleSheet.create({
   formTextArea: {
     minHeight: 70,
     textAlignVertical: 'top',
+  },
+  formRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pickerSelectorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  pickerSelectorInfo: {
+    flex: 1,
+  },
+  pickerSelectorPrimaryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  pickerSelectorSubText: {
+    fontSize: 10,
+    color: Colors.textNavyMuted,
+    marginTop: 1,
   },
   urgencySelectRow: {
     flexDirection: 'row',

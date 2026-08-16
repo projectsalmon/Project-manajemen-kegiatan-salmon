@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { DatePickerModal } from '../components/DatePickerModal';
+import { TimePickerModal } from '../components/TimePickerModal';
 import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ActivityCategoryType } from '../types';
@@ -57,6 +59,8 @@ export const CreateEditActivityScreen: React.FC<CreateEditActivityScreenProps> =
   );
 
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isTimePickerVisible, setIsTimePickerVisible] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(
     existing?.imageUrl || null
   );
@@ -228,24 +232,50 @@ export const CreateEditActivityScreen: React.FC<CreateEditActivityScreenProps> =
           />
         </View>
 
-        {/* Date & Time Row */}
+        {/* Date & Time Selectors */}
         <View style={styles.formRow}>
-          <View style={[styles.fieldContainer, { flex: 1 }]}>
-            <Text style={styles.fieldLabel}>Tanggal *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formattedDate}
-              onChangeText={setFormattedDate}
-            />
+          {/* Tanggal Picker */}
+          <View style={[styles.fieldContainer, { flex: 1, marginRight: 6 }]}>
+            <Text style={styles.fieldLabel}>Tanggal Kegiatan *</Text>
+            <TouchableOpacity
+              style={styles.pickerSelectorBox}
+              activeOpacity={0.8}
+              onPress={() => setIsDatePickerVisible(true)}
+            >
+              <MaterialCommunityIcons
+                name="calendar"
+                size={20}
+                color={Colors.skyBlueHeader}
+              />
+              <View style={styles.pickerSelectorInfo}>
+                <Text style={styles.pickerSelectorPrimaryText} numberOfLines={1}>
+                  {formattedDate}
+                </Text>
+                <Text style={styles.pickerSelectorSubText}>{dateIso}</Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
-          <View style={[styles.fieldContainer, { flex: 1 }]}>
-            <Text style={styles.fieldLabel}>Waktu Jam *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={timeSlot}
-              onChangeText={setTimeSlot}
-            />
+          {/* Waktu Jam Picker */}
+          <View style={[styles.fieldContainer, { flex: 1, marginLeft: 6 }]}>
+            <Text style={styles.fieldLabel}>Waktu & Jam *</Text>
+            <TouchableOpacity
+              style={styles.pickerSelectorBox}
+              activeOpacity={0.8}
+              onPress={() => setIsTimePickerVisible(true)}
+            >
+              <MaterialCommunityIcons
+                name="clock-time-four-outline"
+                size={20}
+                color={Colors.skyBlueHeader}
+              />
+              <View style={styles.pickerSelectorInfo}>
+                <Text style={styles.pickerSelectorPrimaryText} numberOfLines={1}>
+                  {timeSlot}
+                </Text>
+                <Text style={styles.pickerSelectorSubText}>Ketuk ganti jam</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -501,6 +531,27 @@ export const CreateEditActivityScreen: React.FC<CreateEditActivityScreenProps> =
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* 5. POPUP DATE PICKER MODAL */}
+      <DatePickerModal
+        visible={isDatePickerVisible}
+        initialDateIso={dateIso}
+        title="Pilih Tanggal Kegiatan"
+        onClose={() => setIsDatePickerVisible(false)}
+        onSelectDate={(newIso, newFormatted) => {
+          setDateIso(newIso);
+          setFormattedDate(newFormatted);
+        }}
+      />
+
+      {/* 6. POPUP TIME PICKER MODAL */}
+      <TimePickerModal
+        visible={isTimePickerVisible}
+        initialTime={timeSlot}
+        title="Pilih Jam Kegiatan"
+        onClose={() => setIsTimePickerVisible(false)}
+        onSelectTime={(newTime) => setTimeSlot(newTime)}
+      />
     </SafeAreaView>
   );
 };
@@ -509,6 +560,30 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.skyBlueBackground,
+  },
+  pickerSelectorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.skyBlueBackground,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  pickerSelectorInfo: {
+    flex: 1,
+  },
+  pickerSelectorPrimaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  pickerSelectorSubText: {
+    fontSize: 10,
+    color: Colors.textNavyMuted,
+    marginTop: 1,
   },
   topAppBar: {
     height: 56,

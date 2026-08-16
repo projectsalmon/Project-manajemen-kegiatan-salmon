@@ -97,6 +97,7 @@ interface AppContextType {
     targetRegion: string;
     requirements?: string[];
     additionalInfo?: string | null;
+    formattedDate?: string;
   }) => void;
   updateAnnouncement: (
     id: string,
@@ -107,6 +108,7 @@ interface AppContextType {
       targetRegion: string;
       requirements?: string[];
       additionalInfo?: string | null;
+      formattedDate?: string;
     }
   ) => void;
   rwApproveAnnouncement: (announcementId: string) => void;
@@ -644,6 +646,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetRegion: string;
     requirements?: string[];
     additionalInfo?: string | null;
+    formattedDate?: string;
   }) => {
     let initialApproval: ApprovalStatusType = 'PUBLISHED';
     if (currentUser.role === 'RT') {
@@ -656,7 +659,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ANN-${Date.now() % 1000}`,
       title: params.title,
       content: params.content,
-      formattedDate: 'Hari Ini',
+      formattedDate: params.formattedDate || 'Hari Ini',
       authorName: currentUser.name,
       authorRole: currentUser.role,
       targetRegion: params.targetRegion,
@@ -691,6 +694,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetRegion: string;
       requirements?: string[];
       additionalInfo?: string | null;
+      formattedDate?: string;
     }
   ) => {
     setAnnouncements((prev) => {
@@ -698,15 +702,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (item.id !== id) return item;
         return {
           ...item,
-          ...params,
+          title: params.title,
+          content: params.content,
+          urgency: params.urgency,
+          targetRegion: params.targetRegion,
           requirements: params.requirements || [],
+          additionalInfo: params.additionalInfo,
+          formattedDate: params.formattedDate || item.formattedDate,
           isPinned: params.urgency === 'PENTING' || params.urgency === 'DARURAT',
         };
       });
       persistAnnouncements(updated);
       return updated;
     });
-    showToast('Pengumuman diperbarui!');
+    showToast('Pengumuman berhasil diperbarui!');
   };
 
   const rwApproveAnnouncement = (announcementId: string) => {
