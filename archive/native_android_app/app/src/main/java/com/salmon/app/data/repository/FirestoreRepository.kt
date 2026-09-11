@@ -13,7 +13,17 @@ import kotlinx.coroutines.tasks.await
  */
 class FirestoreRepository {
 
-    private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+    private val firestore: FirebaseFirestore by lazy {
+        FirebaseFirestore.getInstance().apply {
+            try {
+                firestoreSettings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                    .setPersistenceEnabled(true)
+                    .build()
+            } catch (e: Exception) {
+                Log.w(TAG, "Firestore settings init note: ${e.localizedMessage}")
+            }
+        }
+    }
     private val firebaseAuth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     companion object {

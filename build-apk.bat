@@ -1,24 +1,32 @@
 @echo off
 setlocal
 echo ===================================================
-echo   Build File APK Android (Kegiatan Kelurahan)
+echo   Build File APK Android (Konek - Update 16 Agustus)
 echo ===================================================
 echo.
-echo Menyiapkan proses build APK standalone...
+echo Menyiapkan proses kompilasi APK Standalone (Offline Bundle)...
+echo Menggunakan Google Play Services Auth dan Plus Jakarta Sans...
 echo.
 
-:: Menambahkan path Node.js ke sesi terminal ini
-set "PATH=C:\Program Files\nodejs;%APPDATA%\npm;%PATH%"
+cd /d "%~dp0react-native-salmon\android"
 
-cd /d "%~dp0react-native-salmon"
+call gradlew.bat assembleRelease
 
-echo 1. Pastikan Anda sudah login ke akun Expo (gratis di https://expo.dev).
-echo 2. Jika belum login, perintah di bawah akan meminta Anda login/daftar terlebih dahulu.
-echo.
-echo Memulai EAS Build untuk Android (APK)...
-echo.
-
-call npx eas-cli build -p android --profile preview
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo ===================================================
+    echo    BUILD BERHASIL! Standalone APK Siap Pakai
+    echo ===================================================
+    copy /y "%~dp0react-native-salmon\android\app\build\outputs\apk\release\app-release.apk" "%~dp0Konek-Kelurahan-Update16Ags.apk" >nul
+    echo.
+    echo File APK sudah siap di folder utama:
+    echo --^> Konek-Kelurahan-Update16Ags.apk
+    echo.
+    echo Anda dapat langsung menyalin file ini ke HP dan menginstallnya!
+) else (
+    echo.
+    echo [ERROR] Terjadi kesalahan saat build APK.
+)
 
 echo.
 pause

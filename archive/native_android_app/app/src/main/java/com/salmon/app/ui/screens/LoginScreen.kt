@@ -62,6 +62,8 @@ fun LoginScreen(
                 // Check if cancelled (e.g. status code 12501)
                 if (e is ApiException && (e.statusCode == 12501 || e.statusCode == 16)) {
                     viewModel.setAuthError("Proses masuk dibatalkan. Silakan pilih akun Google Anda untuk melanjutkan ke layanan.")
+                } else if (e is ApiException && e.statusCode == 10) {
+                    viewModel.setAuthError("DEVELOPER_ERROR (10): SHA-1 fingerprint laptop/perangkat belum terdaftar di Firebase Console.")
                 } else {
                     viewModel.setAuthError("Gagal menghubungkan ke layanan Google (${e.localizedMessage ?: "Koneksi terputus"}). Pastikan perangkat terhubung ke internet dan coba kembali.")
                 }

@@ -612,7 +612,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           </Text>
         ) : (
           rsvpHistory.map((act) => {
-            const rsvpInfo = RsvpStatusMeta[act.userRsvpStatus];
+            const rsvpInfo = (act?.userRsvpStatus && RsvpStatusMeta[act.userRsvpStatus]) || RsvpStatusMeta.NONE;
             return (
               <TouchableOpacity
                 key={act.id}

@@ -30,9 +30,9 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   onRsvpClick,
   onEditClick,
 }) => {
-  const categoryInfo = CategoryMeta[activity.category] || CategoryMeta.KERJA_BAKTI;
-  const approvalInfo = ApprovalStatusMeta[activity.approvalStatus];
-  const rsvpInfo = RsvpStatusMeta[activity.userRsvpStatus];
+  const categoryInfo = (activity?.category && CategoryMeta[activity.category]) || CategoryMeta.KERJA_BAKTI;
+  const approvalInfo = (activity?.approvalStatus && ApprovalStatusMeta[activity.approvalStatus]) || ApprovalStatusMeta.PUBLISHED;
+  const rsvpInfo = (activity?.userRsvpStatus && RsvpStatusMeta[activity.userRsvpStatus]) || RsvpStatusMeta.NONE;
 
   const handleShare = async () => {
     try {
@@ -200,7 +200,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           </View>
 
           {/* Quick RSVP Button */}
-          {activity.userRsvpStatus === 'NONE' ? (
+          {(!activity.userRsvpStatus || activity.userRsvpStatus === 'NONE') ? (
             <TouchableOpacity
               style={styles.rsvpButton}
               activeOpacity={0.8}

@@ -4,8 +4,9 @@
     "slug": "project-manajemen-kegiatan-salmon",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "com.salmon.app",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "backgroundColor": "#0369A1"
     },
@@ -24,7 +25,8 @@
       }
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ]
   }
 }

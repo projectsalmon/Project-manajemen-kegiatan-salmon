@@ -7,12 +7,28 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper: Periksa apakah pengguna adalah Administrator
+    // Helper: Periksa apakah pengguna adalah Administrator / Staf Kelurahan
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.email.lower() == 'salmanakhdanhidayat@gmail.com' ||
-        request.auth.token.role == 'admin' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        ('email' in request.auth.token && request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'salmanakhdanhidayat@gmail.com' ||
+          request.auth.token.email.lower() == 'ytsalmon37@gmail.com'
+        )) ||
+        ('role' in request.auth.token && request.auth.token.role == 'admin') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin' ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('userRole', '') == 'STAF_KELURAHAN'
+        ))
+      );
+    }
+
+    // Helper: Periksa apakah pengguna adalah Pengurus RW
+    function isRW() {
+      return isAuthenticated() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('userRole', '') == 'RW'
+        ))
       );
     }
 
@@ -21,48 +37,59 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Aturan untuk Pengaturan Aplikasi / Identitas Kelurahan (/settings/{docId})
+    match /settings/{docId} {
+      // Semua pengguna (termasuk publik/tamu) dapat membaca nama aplikasi & wilayah kelurahan
+      allow read: if true;
+      // Hanya Admin/Staf Kelurahan yang dapat mengubah konfigurasi identitas wilayah
+      allow write: if isAdmin();
+    }
+
     // Aturan untuk Koleksi Pengguna (/users/{userId})
     match /users/{userId} {
-      // Pengguna dapat membaca data profil miliknya sendiri, Admin dapat membaca semua
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      // Pengguna terautentikasi dapat membaca direktori akun warga, Admin dapat membaca semua
+      allow read: if isAuthenticated();
       
-      // Pengguna dapat memperbarui profilnya sendiri (namun tidak dapat menaikkan rolenya menjadi admin)
-      allow write: if isAdmin() || (
-        isOwner(userId) && (
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-          (request.auth.token.email.lower() == 'salmanakhdanhidayat@gmail.com' && request.resource.data.role == 'admin') ||
-          request.resource.data.role == 'member'
-        )
+      // Pengguna dapat memperbarui profilnya sendiri, Admin memiliki hak penuh
+      allow write: if isAuthenticated() && (
+        isAdmin() || isOwner(userId)
       );
     }
 
     // Aturan untuk Koleksi Kegiatan (/activities/{activityId})
     match /activities/{activityId} {
-      // Semua pengguna terautentikasi (atau publik) dapat membaca kegiatan yang dipublikasikan
-      allow read: if resource == null || resource.data.approvalStatus == 'PUBLISHED' || isAuthenticated();
+      // Semua pengguna (publik & terautentikasi) dapat membaca kegiatan
+      allow read: if true;
 
-      // Anggota / Member dapat membuat kegiatan baru dengan melampirkan userId miliknya
-      allow create: if isAuthenticated() && (
-        isAdmin() || request.resource.data.userId == request.auth.uid
-      );
+      // Pengguna terautentikasi dapat membuat kegiatan atau melakukan seeding awal
+      allow create: if isAuthenticated();
 
-      // Anggota / Member hanya dapat mengubah atau menghapus data kegiatan miliknya sendiri
-      // Admin memiliki hak akses penuh untuk mengelola, menyetujui, dan menghapus seluruh kegiatan
-      allow update, delete: if isAdmin() || (
-        isAuthenticated() && resource.data.userId == request.auth.uid
+      // Pengguna terautentikasi dapat memperbarui kegiatan:
+      // - Admin/Staf Kelurahan: persetujuan akhir & kelola seluruh kegiatan
+      // - Pengurus RW: approval usulan RT
+      // - Pemilik Kegiatan: edit detail kegiatan miliknya
+      // - Warga: konfirmasi kehadiran / partisipasi (RSVP)
+      allow update: if isAuthenticated();
+
+      // Hanya Admin atau pemilik kegiatan yang dapat menghapus kegiatan
+      allow delete: if isAuthenticated() && (
+        isAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        ('email' in request.auth.token && resource.data.creatorEmail == request.auth.token.email)
       );
     }
 
     // Aturan untuk Koleksi Pengumuman (/announcements/{announcementId})
     match /announcements/{announcementId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated() && (isAdmin() || isRW());
     }
 
     // Aturan untuk Kontak Penting (/contacts/{contactId})
     match /contacts/{contactId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
     }
   }
 }
+

@@ -23,8 +23,8 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   onClick,
   onEditClick,
 }) => {
-  const urgencyInfo = UrgencyMeta[announcement.urgency] || UrgencyMeta.INFO;
-  const approvalInfo = ApprovalStatusMeta[announcement.approvalStatus];
+  const urgencyInfo = (announcement?.urgency && UrgencyMeta[announcement.urgency]) || UrgencyMeta.INFO;
+  const approvalInfo = (announcement?.approvalStatus && ApprovalStatusMeta[announcement.approvalStatus]) || ApprovalStatusMeta.PUBLISHED;
 
   const handleShare = async () => {
     try {

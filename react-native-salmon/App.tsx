@@ -20,6 +20,7 @@ import {
 import { Colors } from './src/constants/theme';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 const ToastOverlay: React.FC = () => {
   const { snackbarMessage, clearToast } = useApp();
@@ -65,13 +66,15 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <AppProvider>
-        <StatusBar style="dark" backgroundColor={Colors.white} />
-        <AppNavigator />
-        <ToastOverlay />
-      </AppProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AppProvider>
+          <StatusBar style="dark" backgroundColor={Colors.white} />
+          <AppNavigator />
+          <ToastOverlay />
+        </AppProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -2,15 +2,25 @@ package com.salmon.app.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.salmon.app.R
 
-// Modern, Friendly, Highly Legible Typography System for Civic App
+val PlusJakartaSans = FontFamily(
+    Font(R.font.plus_jakarta_sans_regular, FontWeight.Normal),
+    Font(R.font.plus_jakarta_sans_medium, FontWeight.Medium),
+    Font(R.font.plus_jakarta_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.plus_jakarta_sans_bold, FontWeight.Bold),
+    Font(R.font.plus_jakarta_sans_extrabold, FontWeight.ExtraBold)
+)
+
+// Modern, Friendly, Highly Legible Typography System with Plus Jakarta Sans
 val CivicTypography = Typography(
     // Headlines - Friendly & Impactful
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 28.sp,
         lineHeight = 34.sp,
@@ -18,7 +28,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 30.sp,
@@ -26,7 +36,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     headlineSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
         lineHeight = 26.sp,
@@ -36,7 +46,7 @@ val CivicTypography = Typography(
 
     // Titles - Clear & Approachable
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
         lineHeight = 24.sp,
@@ -44,7 +54,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -52,7 +62,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -62,7 +72,7 @@ val CivicTypography = Typography(
 
     // Body - Soft, Friendly, Easy Reading
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
         lineHeight = 22.sp,
@@ -70,7 +80,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -78,7 +88,7 @@ val CivicTypography = Typography(
         color = TextNavySecondary
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -88,7 +98,7 @@ val CivicTypography = Typography(
 
     // Labels - Compact, Crisp & Legible Badges
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -96,7 +106,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -104,7 +114,7 @@ val CivicTypography = Typography(
         color = TextNavyDark
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 14.sp,
