@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CivicTopBar } from '../components/CivicTopBar';
 import { Colors, Fonts, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import {
+  setNotificationResponseHandler,
+  checkColdStartNotification,
+} from '../services/notificationService';
 import { ActivityDetailScreen } from '../screens/ActivityDetailScreen';
 import { ActivityListScreen } from '../screens/ActivityListScreen';
 import { AdminHomeScreen } from '../screens/AdminHomeScreen';
+import { AdminUserManagementScreen } from '../screens/AdminUserManagementScreen';
 import { AnnouncementListScreen } from '../screens/AnnouncementListScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { CreateEditActivityScreen } from '../screens/CreateEditActivityScreen';
@@ -152,9 +160,53 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
   );
 };
 
+export const navigationRef = createNavigationContainerRef<any>();
+
+export const handleNotificationNavigation = (data: any) => {
+  if (!data) return;
+  const { type, id } = data;
+  if (!id) return;
+
+  const performNav = () => {
+    if (!navigationRef.isReady()) {
+      setTimeout(performNav, 300);
+      return;
+    }
+    try {
+      if (type === 'ACTIVITY') {
+        navigationRef.navigate('ActivityDetailScreen', { activityId: id });
+      } else if (type === 'ANNOUNCEMENT') {
+        navigationRef.navigate('MainTabs', {
+          screen: 'PengumumanTab',
+          params: { selectedAnnouncementId: id },
+        });
+      }
+    } catch (e) {
+      console.log('Error deep linking from notification:', e);
+    }
+  };
+
+  performNav();
+};
+
 export const AppNavigator: React.FC = () => {
+  React.useEffect(() => {
+    const cleanup = setNotificationResponseHandler((data) => {
+      handleNotificationNavigation(data);
+    });
+
+    const timer = setTimeout(() => {
+      checkColdStartNotification();
+    }, 1200);
+
+    return () => {
+      cleanup();
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         initialRouteName="LoginScreen"
         screenOptions={{
@@ -163,7 +215,11 @@ export const AppNavigator: React.FC = () => {
         }}
       >
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
-        <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+        <Stack.Screen
+          name="MainTabs"
+          component={MainTabNavigator}
+          options={{ animation: 'fade' }}
+        />
         <Stack.Screen
           name="ActivityDetailScreen"
           component={ActivityDetailScreen}
@@ -173,6 +229,10 @@ export const AppNavigator: React.FC = () => {
           component={CreateEditActivityScreen}
         />
         <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
+        <Stack.Screen
+          name="AdminUserManagementScreen"
+          component={AdminUserManagementScreen}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

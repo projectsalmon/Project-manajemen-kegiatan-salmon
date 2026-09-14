@@ -1,6 +1,8 @@
 import React from 'react';
 import {
   Image,
+  NativeModules,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -10,7 +12,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ApprovalStatusMeta, Colors, Fonts, UrgencyMeta } from '../constants/theme';
-import { AnnouncementItem } from '../types';
+import { AnnouncementItem, isItemPinned } from '../types';
 
 interface AnnouncementCardProps {
   announcement: AnnouncementItem;
@@ -23,8 +25,10 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   onClick,
   onEditClick,
 }) => {
+  const [imageError, setImageError] = React.useState(false);
   const urgencyInfo = (announcement?.urgency && UrgencyMeta[announcement.urgency]) || UrgencyMeta.INFO;
   const approvalInfo = (announcement?.approvalStatus && ApprovalStatusMeta[announcement.approvalStatus]) || ApprovalStatusMeta.PUBLISHED;
+  const isPinnedActive = isItemPinned(announcement);
 
   const handleShare = async () => {
     try {
@@ -37,6 +41,19 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
         `🗓️ ${announcement.formattedDate} • ${announcement.targetRegion}\n\n` +
         `${announcement.content}${reqText}\n\n` +
         `Diterbitkan oleh: ${announcement.authorName} (${announcement.authorRole})`;
+
+      if (
+        Platform.OS === 'android' &&
+        announcement.imageUrl &&
+        !imageError &&
+        NativeModules.WidgetUpdateModule?.shareToWhatsAppWithImage
+      ) {
+        await NativeModules.WidgetUpdateModule.shareToWhatsAppWithImage(
+          announcement.imageUrl,
+          shareMessage
+        );
+        return;
+      }
 
       await Share.share({
         title: announcement.title,
@@ -51,18 +68,19 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
     <TouchableOpacity
       style={[
         styles.card,
-        announcement.isPinned && { borderColor: Colors.yellowBorderLis, borderWidth: 1.5 },
+        isPinnedActive && { borderColor: '#F59E0B', borderWidth: 2 },
       ]}
       activeOpacity={0.9}
       onPress={onClick}
     >
       {/* 1. TOP-ALIGNED IMAGE BANNER */}
       <View style={styles.imageBannerContainer}>
-        {announcement.imageUrl ? (
+        {announcement.imageUrl && !imageError ? (
           <Image
             source={{ uri: announcement.imageUrl }}
             style={styles.bannerImage}
             resizeMode="cover"
+            onError={() => setImageError(true)}
           />
         ) : (
           <View style={styles.fallbackBanner}>
@@ -89,6 +107,41 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
           </View>
         )}
 
+        {/* Pinned Banner Badge on Top Left */}
+        {isPinnedActive && (
+          <View style={styles.pinnedBannerBadge}>
+            <MaterialCommunityIcons name="pin" size={13} color="#FFFFFF" />
+            <Text style={styles.pinnedBannerBadgeText}>
+              Disematkan ({announcement.pinDurationLabel || 'Teratas'})
+            </Text>
+          </View>
+        )}
+
+        {/* Status Approval Badge */}
+        {announcement.approvalStatus && announcement.approvalStatus !== 'PUBLISHED' && (
+          <View
+            style={[
+              styles.approvalBadge,
+              isPinnedActive && { top: 38 },
+              {
+                backgroundColor: announcement.approvalStatus === 'REJECTED' ? '#FEF2F2' : '#EFF6FF',
+                borderColor: announcement.approvalStatus === 'REJECTED' ? '#DC2626' : '#2563EB',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.approvalBadgeText,
+                {
+                  color: announcement.approvalStatus === 'REJECTED' ? '#DC2626' : '#2563EB',
+                },
+              ]}
+            >
+              {announcement.approvalStatus === 'REJECTED' ? 'DITOLAK' : 'MENUNGGU'}
+            </Text>
+          </View>
+        )}
+
         {/* Share Button on Top Banner */}
         <TouchableOpacity
           style={styles.shareOverlayButton}
@@ -101,6 +154,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
 
       {/* 2. CONTENT DETAILS */}
       <View style={styles.contentPadding}>
+        {/* Top Tag Row */}
         <View style={styles.headerRow}>
           <View style={styles.leftTags}>
             <View
@@ -116,30 +170,40 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
               </Text>
             </View>
 
-            {announcement.isPinned && (
+            {/* Fallback pinned pill if banner image failed or not present */}
+            {isPinnedActive && (!announcement.imageUrl || imageError) && (
               <View style={styles.pinnedTag}>
                 <MaterialCommunityIcons
                   name="pin"
                   size={14}
-                  color={Colors.yellowAccent}
+                  color="#B45309"
                 />
-                <Text style={styles.pinnedTagText}>Disematkan</Text>
+                <Text style={styles.pinnedTagText}>
+                  Disematkan ({announcement.pinDurationLabel || 'Teratas'})
+                </Text>
               </View>
             )}
           </View>
 
-          <View style={styles.rightGroup}>
-            {onEditClick && (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={onEditClick}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="pencil" size={16} color={Colors.skyBlueHeader} />
-              </TouchableOpacity>
-            )}
-            <Text style={styles.dateText}>{announcement.formattedDate}</Text>
-          </View>
+          {onEditClick && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={onEditClick}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="pencil" size={16} color={Colors.skyBlueHeader} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Dedicated Date Row with Clock Icon */}
+        <View style={styles.dateRow}>
+          <MaterialCommunityIcons
+            name="clock-outline"
+            size={13}
+            color={Colors.textNavyMuted}
+          />
+          <Text style={styles.dateText}>{announcement.formattedDate}</Text>
         </View>
 
         {/* Title */}
@@ -234,6 +298,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  pinnedBannerBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#D97706',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  pinnedBannerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   shareOverlayButton: {
     position: 'absolute',
     top: 10,
@@ -252,13 +338,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   leftTags: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flexShrink: 1,
+    flexWrap: 'wrap',
+    flex: 1,
   },
   urgencyTag: {
     paddingHorizontal: 8,
@@ -274,19 +361,26 @@ const styles = StyleSheet.create({
   pinnedTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   pinnedTagText: {
     fontSize: 11,
     fontWeight: '700',
     fontFamily: Fonts.bodyBold,
-    color: Colors.yellowAccent,
+    color: '#92400E',
     includeFontPadding: false,
   },
-  rightGroup: {
+  dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    marginBottom: 8,
   },
   editButton: {
     padding: 2,

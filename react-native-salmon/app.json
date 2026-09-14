@@ -7,6 +7,7 @@
     "scheme": "com.salmon.app",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
+    "icon": "./assets/icon.png",
     "splash": {
       "backgroundColor": "#0369A1"
     },
@@ -15,6 +16,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0369A1"
       },
       "package": "com.salmon.app"

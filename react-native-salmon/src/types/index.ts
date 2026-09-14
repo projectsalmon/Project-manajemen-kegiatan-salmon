@@ -38,6 +38,8 @@ export interface UserProfile {
   isVerifiedWarga?: boolean;
   verifiedCode?: string;
   verifiedAt?: string;
+  lastLoginAt?: string;
+  createdAt?: string;
 }
 
 export type ActivityCategoryType =
@@ -104,6 +106,10 @@ export interface ActivityItem {
   needsFollowUp?: boolean;
   followUpNote?: string | null;
   isFeatured?: boolean;
+  isPinned?: boolean;
+  pinnedAt?: string | null;
+  pinExpiresAt?: string | null;
+  pinDurationLabel?: string | null;
 }
 
 export type AnnouncementUrgencyType = 'PENTING' | 'INFO' | 'IMBAUAN' | 'DARURAT';
@@ -128,6 +134,9 @@ export interface AnnouncementItem {
   imageUrl?: string | null;
   approvalStatus: ApprovalStatusType;
   isPinned: boolean;
+  pinnedAt?: string | null;
+  pinExpiresAt?: string | null;
+  pinDurationLabel?: string | null;
 }
 
 export interface ContactItem {
@@ -136,3 +145,34 @@ export interface ContactItem {
   phoneNumber: string;
   category: string;
 }
+
+// Helper: check if item is currently active-pinned (accounting for expiration)
+export const isItemPinned = (item?: {
+  isPinned?: boolean;
+  pinExpiresAt?: string | null;
+}): boolean => {
+  if (!item || !item.isPinned) return false;
+  if (!item.pinExpiresAt) return true; // Pinned forever until manually unpinned
+  try {
+    return new Date(item.pinExpiresAt).getTime() > Date.now();
+  } catch {
+    return true;
+  }
+};
+
+export interface PinDurationOption {
+  label: string;
+  ms: number | null; // null = Selamanya
+}
+
+export const PIN_DURATION_OPTIONS: PinDurationOption[] = [
+  { label: '30 Menit', ms: 30 * 60 * 1000 },
+  { label: '1 Jam', ms: 60 * 60 * 1000 },
+  { label: '3 Jam', ms: 3 * 60 * 60 * 1000 },
+  { label: '6 Jam', ms: 6 * 60 * 60 * 1000 },
+  { label: '12 Jam', ms: 12 * 60 * 60 * 1000 },
+  { label: '1 Hari', ms: 24 * 60 * 60 * 1000 },
+  { label: '3 Hari', ms: 3 * 24 * 60 * 60 * 1000 },
+  { label: '7 Hari', ms: 7 * 24 * 60 * 60 * 1000 },
+  { label: 'Selamanya', ms: null },
+];

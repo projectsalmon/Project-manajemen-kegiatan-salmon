@@ -6,8 +6,7 @@ node_modules/
 dist/
 web-build/
 
-# Native builds
-android/
+# Native builds (ios only ignored, android is custom native project)
 ios/
 
 # Environment

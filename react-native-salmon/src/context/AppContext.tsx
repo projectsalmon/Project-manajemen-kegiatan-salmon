@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { NativeModules, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   collection,
@@ -10,7 +11,9 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { db, ensureAuth } from '../services/firebase';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { auth, db, ensureAuth } from '../services/firebase';
+import { initializeNotifications, triggerNotification } from '../services/notificationService';
 import {
   ActivityCategoryType,
   ActivityItem,
@@ -23,6 +26,7 @@ import {
   RsvpStatusType,
   UserProfile,
   UserRoleType,
+  isItemPinned,
 } from '../types';
 import {
   defaultContacts,
@@ -40,6 +44,26 @@ const STORAGE_KEYS = {
   REGION_CODES: '@salmon_region_codes_v2',
   USER_PROFILE: '@salmon_profile_v2',
   LOCATION_PRESETS: '@salmon_locations_v2',
+  INITIAL_SEEDED: '@salmon_seeded_online_v3',
+  NOTIFIED_ITEMS: '@salmon_notified_items_v2',
+  DELETED_ITEMS: '@salmon_deleted_items_v2',
+  IS_LOGGED_IN: '@salmon_is_logged_in_v2',
+};
+
+export const defaultGuestProfile: UserProfile = {
+  id: 'GUEST',
+  name: 'Warga Kelurahan',
+  nik: '',
+  role: 'WARGA',
+  age: '',
+  address: '',
+  rt: '03',
+  rw: '05',
+  kelurahan: 'Sukamaju',
+  phone: '',
+  email: '',
+  avatarUrl: '',
+  isVerifiedWarga: false,
 };
 
 // Helper to remove undefined fields before writing to Firestore
@@ -54,8 +78,84 @@ const sanitizeForFirestore = (data: Record<string, any>): Record<string, any> =>
   return clean;
 };
 
+// Helper to update Android Home Screen Widget (Scrollable ListView like WhatsApp)
+const syncHomeScreenWidget = (
+  activitiesList: ActivityItem[],
+  announcementsList: AnnouncementItem[]
+) => {
+  try {
+    if (Platform.OS !== 'android' || !NativeModules.WidgetUpdateModule) return;
+    const { WidgetUpdateModule } = NativeModules;
+
+    const widgetItems: Array<{
+      id: string;
+      title: string;
+      subtitle: string;
+      type: 'KEGIATAN' | 'PENGUMUMAN';
+      isPinned: boolean;
+      timestamp: number;
+    }> = [];
+
+    // 1. Gather published activities
+    (activitiesList || [])
+      .filter((a) => a && a.approvalStatus === 'PUBLISHED')
+      .forEach((act) => {
+        widgetItems.push({
+          id: act.id,
+          title: act.title,
+          subtitle: `${act.formattedDate || 'Segera'} • ${act.locationName || 'Lingkungan'}`,
+          type: 'KEGIATAN',
+          isPinned: !!isItemPinned(act),
+          timestamp: new Date(act.dateIso || Date.now()).getTime(),
+        });
+      });
+
+    // 2. Gather published announcements
+    (announcementsList || [])
+      .filter((a) => a && a.approvalStatus === 'PUBLISHED')
+      .forEach((ann) => {
+        widgetItems.push({
+          id: ann.id,
+          title: ann.title,
+          subtitle: `${ann.formattedDate || 'Pengumuman'} • ${ann.authorName || 'Pengurus'}`,
+          type: 'PENGUMUMAN',
+          isPinned: !!isItemPinned(ann),
+          timestamp: Date.now(),
+        });
+      });
+
+    // 3. Sort: Pinned items on top, then newer items
+    widgetItems.sort((a, b) => {
+      if (a.isPinned !== b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      return b.timestamp - a.timestamp;
+    });
+
+    const topItems = widgetItems.slice(0, 15);
+
+    // Send full JSON list for scrollable widget
+    if (WidgetUpdateModule.updateWidgetList) {
+      WidgetUpdateModule.updateWidgetList(JSON.stringify(topItems));
+    }
+
+    // Also update legacy single-item widget if needed
+    if (topItems.length > 0 && WidgetUpdateModule.updateWidget) {
+      const first = topItems[0];
+      WidgetUpdateModule.updateWidget(first.title, first.subtitle, first.type);
+    }
+  } catch (e) {
+    // Graceful fallback
+  }
+};
+
 interface AppContextType {
   currentUser: UserProfile;
+  isLoggedIn: boolean;
+  allUsers: UserProfile[];
+  isSuperAdmin: (email?: string) => boolean;
+  updateUserRoleByAdmin: (targetEmailOrId: string, newRole: UserRoleType) => Promise<boolean>;
+  fetchAllUsers: () => Promise<UserProfile[]>;
   activities: ActivityItem[];
   announcements: AnnouncementItem[];
   contacts: ContactItem[];
@@ -73,6 +173,7 @@ interface AppContextType {
   switchRole: (newRole: UserRoleType) => void;
   updateProfile: (updatedData: Partial<UserProfile>) => void;
   loginWithGoogleProfile: (profile: { email: string; name: string; photoUrl?: string }) => void;
+  logout: () => Promise<void>;
   createOrUpdateRegionCode: (params: {
     code: string;
     description: string;
@@ -100,6 +201,10 @@ interface AppContextType {
     targetRegion: string;
     quota?: number | null;
     imageUrl?: string | null;
+    isPinned?: boolean;
+    pinnedAt?: string | null;
+    pinExpiresAt?: string | null;
+    pinDurationLabel?: string | null;
   }) => void;
   updateActivity: (
     id: string,
@@ -116,8 +221,18 @@ interface AppContextType {
       targetRegion: string;
       quota?: number | null;
       imageUrl?: string | null;
+      isPinned?: boolean;
+      pinnedAt?: string | null;
+      pinExpiresAt?: string | null;
+      pinDurationLabel?: string | null;
     }
   ) => void;
+  deleteActivity: (activityId: string) => Promise<void>;
+  togglePinActivity: (
+    activityId: string,
+    durationMs?: number | null,
+    durationLabel?: string | null
+  ) => Promise<void>;
   rwApproveActivity: (activityId: string) => void;
   rwRejectActivity: (activityId: string) => void;
   adminApproveActivity: (activityId: string) => void;
@@ -129,7 +244,12 @@ interface AppContextType {
     targetRegion: string;
     requirements?: string[];
     additionalInfo?: string | null;
+    imageUrl?: string | null;
     formattedDate?: string;
+    isPinned?: boolean;
+    pinnedAt?: string | null;
+    pinExpiresAt?: string | null;
+    pinDurationLabel?: string | null;
   }) => void;
   updateAnnouncement: (
     id: string,
@@ -140,9 +260,20 @@ interface AppContextType {
       targetRegion: string;
       requirements?: string[];
       additionalInfo?: string | null;
+      imageUrl?: string | null;
       formattedDate?: string;
+      isPinned?: boolean;
+      pinnedAt?: string | null;
+      pinExpiresAt?: string | null;
+      pinDurationLabel?: string | null;
     }
   ) => void;
+  deleteAnnouncement: (announcementId: string) => Promise<void>;
+  togglePinAnnouncement: (
+    announcementId: string,
+    durationMs?: number | null,
+    durationLabel?: string | null
+  ) => Promise<void>;
   rwApproveAnnouncement: (announcementId: string) => void;
   adminApproveAnnouncement: (announcementId: string) => void;
   rejectAnnouncement: (announcementId: string) => void;
@@ -158,12 +289,19 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<UserProfile>(defaultUserProfile);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(defaultGuestProfile);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const isLoggedInRef = useRef(false);
+  useEffect(() => {
+    isLoggedInRef.current = isLoggedIn;
+  }, [isLoggedIn]);
+
   const [activities, setActivities] = useState<ActivityItem[]>(sampleActivities);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>(sampleAnnouncements);
   const [contacts, setContacts] = useState<ContactItem[]>(defaultContacts);
   const [regionCodes, setRegionCodes] = useState<RegionInvitationCode[]>(defaultRegionCodes);
   const [locationPresets, setLocationPresets] = useState<LocationPresetItem[]>(defaultLocationPresets);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ActivityCategoryType | null>(
     null
@@ -176,14 +314,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const loadStoredData = async () => {
       try {
+        const storedLoginStatus = await AsyncStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
         const storedProfile = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
-        if (storedProfile) setCurrentUser(JSON.parse(storedProfile));
+        if (storedLoginStatus === 'true' && storedProfile) {
+          try {
+            const parsed = JSON.parse(storedProfile);
+            if (parsed && parsed.email) {
+              setCurrentUser(parsed);
+              currentUserRef.current = parsed;
+              setIsLoggedIn(true);
+              isLoggedInRef.current = true;
+            }
+          } catch {}
+        }
 
         const storedActivities = await AsyncStorage.getItem(STORAGE_KEYS.ACTIVITIES);
-        if (storedActivities) setActivities(JSON.parse(storedActivities));
+        if (storedActivities) {
+          const parsed = JSON.parse(storedActivities);
+          if (Array.isArray(parsed)) {
+            parsed.sort((a: ActivityItem, b: ActivityItem) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+            setActivities(parsed);
+          }
+        }
 
         const storedAnnouncements = await AsyncStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS);
-        if (storedAnnouncements) setAnnouncements(JSON.parse(storedAnnouncements));
+        if (storedAnnouncements) {
+          const parsed = JSON.parse(storedAnnouncements);
+          if (Array.isArray(parsed)) {
+            parsed.sort((a: AnnouncementItem, b: AnnouncementItem) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+            setAnnouncements(parsed);
+          }
+        }
+
+        const storedNotified = await AsyncStorage.getItem(STORAGE_KEYS.NOTIFIED_ITEMS);
+        if (storedNotified) {
+          try {
+            notifiedKeysRef.current = new Set(JSON.parse(storedNotified));
+          } catch {}
+        }
+
+        const storedDeleted = await AsyncStorage.getItem(STORAGE_KEYS.DELETED_ITEMS);
+        if (storedDeleted) {
+          try {
+            deletedIdsRef.current = new Set(JSON.parse(storedDeleted));
+          } catch {}
+        }
 
         const storedContacts = await AsyncStorage.getItem(STORAGE_KEYS.CONTACTS);
         if (storedContacts) setContacts(JSON.parse(storedContacts));
@@ -193,6 +368,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const storedLocations = await AsyncStorage.getItem(STORAGE_KEYS.LOCATION_PRESETS);
         if (storedLocations) setLocationPresets(JSON.parse(storedLocations));
+
+        // Ensure online sample data is seeded to Firestore ONCE if collections are empty
+        const isSeeded = await AsyncStorage.getItem(STORAGE_KEYS.INITIAL_SEEDED);
+        if (!isSeeded) {
+          try {
+            const annSnap = await getDocs(collection(db, 'announcements'));
+            if (annSnap.empty) {
+              for (const item of sampleAnnouncements) {
+                await setDoc(doc(db, 'announcements', item.id), sanitizeForFirestore(item));
+              }
+            }
+            const actSnap = await getDocs(collection(db, 'activities'));
+            if (actSnap.empty) {
+              for (const item of sampleActivities) {
+                await setDoc(doc(db, 'activities', item.id), sanitizeForFirestore(item));
+              }
+            }
+            await AsyncStorage.setItem(STORAGE_KEYS.INITIAL_SEEDED, 'true');
+          } catch (seedErr) {
+            console.warn('Initial seeding error:', seedErr);
+          }
+        }
       } catch (e) {
         console.warn('Gagal memuat cache lokal:', e);
       }
@@ -201,28 +398,128 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ensureAuth();
   }, []);
 
-  // 2. Realtime Firestore Sync for Activities
+  // Initialize System Notifications
+  useEffect(() => {
+    initializeNotifications();
+  }, []);
+
+  // Ref to always track latest currentUser in async callbacks
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  const isFirstActivitiesSnapshot = useRef(true);
+  const prevActivitiesMap = useRef<Map<string, ActivityItem>>(new Map());
+  const isFirstAnnouncementsSnapshot = useRef(true);
+  const prevAnnouncementsMap = useRef<Map<string, AnnouncementItem>>(new Map());
+
+  // Deduplication sets to prevent notification spam across restarts/updates
+  const notifiedKeysRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
+
+  // Helper to send deduplicated realtime notifications with payload
+  const sendRealtimeNotification = async (
+    notificationKey: string,
+    title: string,
+    body: string,
+    target: { type: 'ACTIVITY' | 'ANNOUNCEMENT'; id: string }
+  ) => {
+    // DO NOT notify if user is not logged in!
+    if (!isLoggedInRef.current || !currentUserRef.current.email) {
+      return;
+    }
+    // If already notified or item was deleted, skip
+    if (notifiedKeysRef.current.has(notificationKey) || deletedIdsRef.current.has(target.id)) {
+      return;
+    }
+    notifiedKeysRef.current.add(notificationKey);
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.NOTIFIED_ITEMS,
+        JSON.stringify(Array.from(notifiedKeysRef.current))
+      );
+    } catch {}
+
+    triggerNotification({
+      title,
+      body,
+      data: target,
+    });
+  };
+
+  // 2. Realtime Firestore Sync for Activities with Push Notifications & Widget Sync
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, 'activities'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const items: ActivityItem[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            items.push({
-              userRsvpStatus: 'NONE',
-              approvalStatus: 'PUBLISHED',
-              category: 'KERJA_BAKTI',
-              confirmedCount: 0,
-              maybeCount: 0,
-              targetRegion: 'Semua Wilayah',
-              ...(data as ActivityItem),
-              id: docSnap.id,
-            });
+        const items: ActivityItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const actData = docSnap.data() as Partial<ActivityItem>;
+          items.push({
+            id: docSnap.id,
+            title: actData.title || '',
+            description: actData.description || '',
+            category: actData.category || 'KERJA_BAKTI',
+            customCategoryName: actData.customCategoryName,
+            dateIso: actData.dateIso || '',
+            formattedDate: actData.formattedDate || '',
+            timeSlot: actData.timeSlot || '',
+            locationName: actData.locationName || '',
+            locationAddress: actData.locationAddress || '',
+            latitude: actData.latitude || -6.215,
+            longitude: actData.longitude || 106.845,
+            targetRegion: actData.targetRegion || 'Semua Wilayah',
+            organizerRole: actData.organizerRole || 'WARGA',
+            organizerName: actData.organizerName || 'Warga',
+            confirmedCount: actData.confirmedCount ?? 0,
+            maybeCount: actData.maybeCount ?? 0,
+            quota: actData.quota ?? null,
+            userRsvpStatus: actData.userRsvpStatus || 'NONE',
+            photos: Array.isArray(actData.photos)
+              ? actData.photos
+              : actData.imageUrl
+              ? [actData.imageUrl]
+              : [],
+            imageUrl: actData.imageUrl || null,
+            videos: actData.videos || [],
+            approvalStatus: actData.approvalStatus || 'PUBLISHED',
+            needsFollowUp: actData.needsFollowUp ?? false,
+            followUpNote: actData.followUpNote ?? null,
+            isFeatured: actData.isFeatured ?? false,
+            isPinned: actData.isPinned ?? false,
+            pinnedAt: actData.pinnedAt ?? null,
+            pinExpiresAt: actData.pinExpiresAt ?? null,
+            pinDurationLabel: actData.pinDurationLabel ?? null,
           });
-          setActivities(items);
-          persistActivities(items);
+        });
+        items.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+        setActivities(items);
+        persistActivities(items);
+        syncHomeScreenWidget(items, announcements);
+
+        // Realtime notification evaluation
+        if (isFirstActivitiesSnapshot.current) {
+          isFirstActivitiesSnapshot.current = false;
+          prevActivitiesMap.current = new Map(items.map((it) => [it.id, it]));
+          // Mark all pre-existing items as notified so app boot never triggers alerts
+          items.forEach((it) => notifiedKeysRef.current.add(it.id + '_CREATED'));
+        } else {
+          items.forEach((item) => {
+            if (deletedIdsRef.current.has(item.id)) return;
+            const oldItem = prevActivitiesMap.current.get(item.id);
+
+            // ONLY NOTIFY ON NEW PUBLISHED ACTIVITIES
+            if (!oldItem && item.approvalStatus === 'PUBLISHED') {
+              sendRealtimeNotification(
+                item.id + '_PUBLISHED',
+                'Kegiatan Baru!',
+                `"${item.title}" - ${item.formattedDate || 'Segera'} di ${item.locationName || 'Lokasi Kegiatan'}`,
+                { type: 'ACTIVITY', id: item.id }
+              );
+            }
+          });
+          prevActivitiesMap.current = new Map(items.map((it) => [it.id, it]));
         }
       },
       (error) => {
@@ -233,25 +530,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // 3. Realtime Firestore Sync for Announcements
+  // 3. Realtime Firestore Sync for Announcements with Push Notifications & Widget Sync
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, 'announcements'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const items: AnnouncementItem[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            items.push({
-              urgency: 'INFO',
-              approvalStatus: 'PUBLISHED',
-              targetRegion: 'Semua Wilayah',
-              ...(data as AnnouncementItem),
-              id: docSnap.id,
-            });
+        const items: AnnouncementItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const annData = docSnap.data() as Partial<AnnouncementItem>;
+          items.push({
+            id: docSnap.id,
+            title: annData.title || '',
+            content: annData.content || '',
+            urgency: annData.urgency || 'INFO',
+            targetRegion: annData.targetRegion || 'Semua Wilayah',
+            authorRole: annData.authorRole || 'WARGA',
+            authorName: annData.authorName || 'Pengurus',
+            formattedDate: annData.formattedDate || '',
+            isPinned: annData.isPinned ?? false,
+            pinnedAt: annData.pinnedAt ?? null,
+            pinExpiresAt: annData.pinExpiresAt ?? null,
+            pinDurationLabel: annData.pinDurationLabel ?? null,
+            approvalStatus: annData.approvalStatus || 'PUBLISHED',
+            requirements: annData.requirements || [],
+            additionalInfo: annData.additionalInfo ?? null,
+            imageUrl: annData.imageUrl ?? null,
           });
-          setAnnouncements(items);
-          persistAnnouncements(items);
+        });
+        items.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+        setAnnouncements(items);
+        persistAnnouncements(items);
+        syncHomeScreenWidget(activities, items);
+
+        // Realtime notification evaluation for announcements
+        if (isFirstAnnouncementsSnapshot.current) {
+          isFirstAnnouncementsSnapshot.current = false;
+          prevAnnouncementsMap.current = new Map(items.map((it) => [it.id, it]));
+          // Mark all pre-existing items as notified so app boot never triggers alerts
+          items.forEach((it) => notifiedKeysRef.current.add(it.id + '_CREATED'));
+        } else {
+          items.forEach((item) => {
+            if (deletedIdsRef.current.has(item.id)) return;
+            const oldItem = prevAnnouncementsMap.current.get(item.id);
+
+            // ONLY NOTIFY ON NEW PUBLISHED ANNOUNCEMENTS
+            if (!oldItem && item.approvalStatus === 'PUBLISHED') {
+              const shortContent =
+                item.content.length > 80 ? item.content.slice(0, 80) + '...' : item.content;
+              sendRealtimeNotification(
+                item.id + '_ANN_PUBLISHED',
+                'Pengumuman Baru!',
+                `[${item.urgency}] ${item.title}: ${shortContent}`,
+                { type: 'ANNOUNCEMENT', id: item.id }
+              );
+            }
+          });
+          prevAnnouncementsMap.current = new Map(items.map((it) => [it.id, it]));
         }
       },
       (error) => {
@@ -261,6 +595,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => unsubscribe();
   }, []);
+
+  // 4. Continuously Sync to Android Home Screen Widget
+  useEffect(() => {
+    syncHomeScreenWidget(activities, announcements);
+  }, [activities, announcements]);
 
   // 4. Realtime Firestore Sync for Region Codes & Location Presets
   useEffect(() => {
@@ -302,9 +641,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 5. Realtime Sync for Current User Profile in Firestore
   useEffect(() => {
-    if (!currentUser.id || currentUser.id === 'user-salman-admin') return;
+    const userIdentifier = currentUser.email || currentUser.id;
+    if (!userIdentifier || userIdentifier === 'USR-001') return;
 
-    const userDocId = currentUser.email.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    const userDocId = userIdentifier.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
     const unsubscribe = onSnapshot(
       doc(db, 'users', userDocId),
       (docSnap) => {
@@ -315,7 +655,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...prev,
               ...remoteData,
               id: prev.id,
-              email: prev.email,
+              email: prev.email || remoteData.email || '',
             };
             persistProfile(merged);
             return merged;
@@ -328,7 +668,147 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     return () => unsubscribe();
-  }, [currentUser.email]);
+  }, [currentUser.email, currentUser.id]);
+
+  // 6. Realtime Firestore Sync for All Registered Users (So Admin sees new users immediately)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'users'),
+      (snapshot) => {
+        const list: UserProfile[] = [];
+        snapshot.forEach((docSnap) => {
+          const uData = docSnap.data() as Record<string, any>;
+          const cleanEmail =
+            typeof uData.email === 'string' && uData.email.trim()
+              ? uData.email.trim()
+              : docSnap.id.includes('@')
+              ? docSnap.id
+              : '';
+          list.push({
+            id: docSnap.id,
+            name:
+              typeof uData.name === 'string' && uData.name.trim()
+                ? uData.name
+                : cleanEmail
+                ? cleanEmail.split('@')[0]
+                : 'Pengguna Sukamaju',
+            nik: typeof uData.nik === 'string' ? uData.nik : '',
+            role: (uData.role as UserRoleType) || (uData.userRole as UserRoleType) || 'WARGA',
+            age: uData.age,
+            address: typeof uData.address === 'string' ? uData.address : '',
+            rt: typeof uData.rt === 'string' ? uData.rt : '01',
+            rw: typeof uData.rw === 'string' ? uData.rw : '05',
+            kelurahan: typeof uData.kelurahan === 'string' ? uData.kelurahan : 'Sukamaju',
+            phone: typeof uData.phone === 'string' ? uData.phone : '',
+            email: cleanEmail,
+            avatarUrl: typeof uData.avatarUrl === 'string' ? uData.avatarUrl : undefined,
+            isVerifiedWarga: !!uData.isVerifiedWarga,
+            verifiedCode: typeof uData.verifiedCode === 'string' ? uData.verifiedCode : undefined,
+            verifiedAt: typeof uData.verifiedAt === 'string' ? uData.verifiedAt : undefined,
+            lastLoginAt: typeof uData.lastLoginAt === 'string' ? uData.lastLoginAt : undefined,
+            createdAt: typeof uData.createdAt === 'string' ? uData.createdAt : undefined,
+          });
+        });
+        list.sort((a, b) => {
+          const timeA = String(a.lastLoginAt || a.createdAt || '');
+          const timeB = String(b.lastLoginAt || b.createdAt || '');
+          return timeB.localeCompare(timeA);
+        });
+        setAllUsers(list);
+      },
+      (error) => {
+        console.warn('Firestore users listener error:', error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch All Users on Demand
+  const fetchAllUsers = async (): Promise<UserProfile[]> => {
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      if (!snap.empty) {
+        const list: UserProfile[] = [];
+        snap.forEach((docSnap) => {
+          const uData = docSnap.data() as Record<string, any>;
+          const cleanEmail =
+            typeof uData.email === 'string' && uData.email.trim()
+              ? uData.email.trim()
+              : docSnap.id.includes('@')
+              ? docSnap.id
+              : '';
+          list.push({
+            id: docSnap.id,
+            name:
+              typeof uData.name === 'string' && uData.name.trim()
+                ? uData.name
+                : cleanEmail
+                ? cleanEmail.split('@')[0]
+                : 'Pengguna Sukamaju',
+            nik: typeof uData.nik === 'string' ? uData.nik : '',
+            role: (uData.role as UserRoleType) || (uData.userRole as UserRoleType) || 'WARGA',
+            age: uData.age,
+            address: typeof uData.address === 'string' ? uData.address : '',
+            rt: typeof uData.rt === 'string' ? uData.rt : '01',
+            rw: typeof uData.rw === 'string' ? uData.rw : '05',
+            kelurahan: typeof uData.kelurahan === 'string' ? uData.kelurahan : 'Sukamaju',
+            phone: typeof uData.phone === 'string' ? uData.phone : '',
+            email: cleanEmail,
+            avatarUrl: typeof uData.avatarUrl === 'string' ? uData.avatarUrl : undefined,
+            isVerifiedWarga: !!uData.isVerifiedWarga,
+            verifiedCode: typeof uData.verifiedCode === 'string' ? uData.verifiedCode : undefined,
+            verifiedAt: typeof uData.verifiedAt === 'string' ? uData.verifiedAt : undefined,
+            lastLoginAt: typeof uData.lastLoginAt === 'string' ? uData.lastLoginAt : undefined,
+            createdAt: typeof uData.createdAt === 'string' ? uData.createdAt : undefined,
+          });
+        });
+        list.sort((a, b) => {
+          const timeA = String(a.lastLoginAt || a.createdAt || '');
+          const timeB = String(b.lastLoginAt || b.createdAt || '');
+          return timeB.localeCompare(timeA);
+        });
+        setAllUsers(list);
+        return list;
+      }
+      return [];
+    } catch (err) {
+      console.warn('Gagal fetch all users:', err);
+      return [];
+    }
+  };
+
+  // Helper: check if email is Super Admin
+  const isSuperAdmin = (email?: string): boolean => {
+    if (!email) return false;
+    const clean = email.toLowerCase().trim();
+    return clean === 'salmanakhdanhidayat@gmail.com' || clean === 'ytsalmon37@gmail.com';
+  };
+
+  // Admin function: update any user's role in Firestore
+  const updateUserRoleByAdmin = async (
+    targetEmailOrId: string,
+    newRole: UserRoleType
+  ): Promise<boolean> => {
+    try {
+      const userDocId = targetEmailOrId.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      await setDoc(
+        doc(db, 'users', userDocId),
+        {
+          role: newRole,
+          userRole: newRole,
+          roleUpdatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      showToast(`Peran pengguna berhasil diubah ke: ${newRole}`);
+      return true;
+    } catch (error) {
+      console.warn('Gagal update role oleh admin:', error);
+      showToast('Gagal mengubah peran. Silakan periksa koneksi internet.');
+      return false;
+    }
+  };
 
   const showToast = (msg: string) => {
     setSnackbarMessage(msg);
@@ -392,18 +872,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...updatedData,
     };
     setCurrentUser(updated);
-    persistProfile(updated);
+    await persistProfile(updated);
 
     // Sync to Firestore
-    if (updated.email) {
-      const userDocId = updated.email.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    const userIdentifier = updated.email || updated.id;
+    if (userIdentifier && userIdentifier !== 'USR-001') {
+      const userDocId = userIdentifier.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
       try {
         await setDoc(doc(db, 'users', userDocId), sanitizeForFirestore(updated), { merge: true });
-      } catch (err) {
+        showToast('Profil & foto berhasil tersimpan secara online di Cloud!');
+      } catch (err: any) {
         console.warn('Gagal sync profil ke Firestore:', err);
+        showToast('Tersimpan di perangkat lokal. Gagal sinkronisasi online (ukuran foto terlalu besar atau koneksi offline).');
       }
+    } else {
+      showToast('Profil berhasil disimpan di perangkat lokal.');
     }
-    showToast('Profil berhasil disimpan & disinkronkan ke Cloud!');
   };
 
   const createOrUpdateRegionCode = (params: {
@@ -602,13 +1086,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanEmail = profile.email.toLowerCase().trim();
     const isAdmin = cleanEmail === 'salmanakhdanhidayat@gmail.com' || cleanEmail === 'ytsalmon37@gmail.com';
     const userDocId = cleanEmail.replace(/[^a-z0-9]/g, '_');
+    const nowIso = new Date().toISOString();
 
     let finalRole: UserRoleType = isAdmin ? 'STAF_KELURAHAN' : 'WARGA';
     let finalProfile: UserProfile = {
-      id: profile.email,
-      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga Baru Sukamaju'),
+      id: userDocId,
+      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga Sukamaju'),
       nik: isAdmin ? '3201012345670001' : '',
-      email: profile.email,
+      email: cleanEmail,
       phone: '',
       role: finalRole,
       rt: isAdmin ? '002' : '03',
@@ -616,9 +1101,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       kelurahan: 'Sukamaju',
       avatarUrl: profile.photoUrl || undefined,
       isVerifiedWarga: isAdmin,
+      lastLoginAt: nowIso,
+      createdAt: nowIso,
     };
 
-    // Check if user already exists in Firestore
+    // Check if user already exists in Firestore and persist
     try {
       const existingUserSnap = await getDoc(doc(db, 'users', userDocId));
       if (existingUserSnap.exists()) {
@@ -626,20 +1113,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         finalProfile = {
           ...finalProfile,
           ...remoteData,
-          name: profile.name || remoteData.name,
-          avatarUrl: profile.photoUrl || remoteData.avatarUrl,
+          id: userDocId,
+          email: cleanEmail,
+          name: profile.name || remoteData.name || finalProfile.name,
+          avatarUrl: profile.photoUrl || remoteData.avatarUrl || finalProfile.avatarUrl,
+          lastLoginAt: nowIso,
         };
+        // Update last login & profile in Firestore
+        await setDoc(
+          doc(db, 'users', userDocId),
+          sanitizeForFirestore({
+            ...finalProfile,
+            id: userDocId,
+            email: cleanEmail,
+            role: finalProfile.role || finalRole,
+            userRole: finalProfile.role || finalRole,
+            lastLoginAt: nowIso,
+            name: finalProfile.name,
+            avatarUrl: finalProfile.avatarUrl || null,
+          }),
+          { merge: true }
+        );
       } else {
-        // Save initial user to Firestore
-        await setDoc(doc(db, 'users', userDocId), sanitizeForFirestore(finalProfile));
+        // Save initial user to Firestore with createdAt & lastLoginAt
+        await setDoc(
+          doc(db, 'users', userDocId),
+          sanitizeForFirestore({
+            ...finalProfile,
+            id: userDocId,
+            email: cleanEmail,
+            role: finalRole,
+            userRole: finalRole,
+          }),
+          { merge: true }
+        );
       }
     } catch (e) {
       console.warn('Gagal baca/tulis profil user di Firestore:', e);
     }
 
+    // Immediately update local allUsers list so Admin sees the new account instantly
+    setAllUsers((prev) => {
+      const filtered = prev.filter(
+        (u) => u.email?.toLowerCase() !== cleanEmail && u.id !== userDocId
+      );
+      return [finalProfile, ...filtered];
+    });
+
+    setIsLoggedIn(true);
+    isLoggedInRef.current = true;
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
+    } catch {}
+
     setCurrentUser(finalProfile);
+    currentUserRef.current = finalProfile;
     persistProfile(finalProfile);
     showToast(`Selamat datang, ${finalProfile.name}!`);
+  };
+
+  const logout = async () => {
+    try {
+      await GoogleSignin.signOut().catch(() => {});
+      await GoogleSignin.revokeAccess().catch(() => {});
+      await auth.signOut().catch(() => {});
+    } catch (e) {
+      console.warn('Logout error:', e);
+    }
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEYS.USER_PROFILE);
+      await AsyncStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+    } catch {}
+
+    setIsLoggedIn(false);
+    isLoggedInRef.current = false;
+    setCurrentUser(defaultGuestProfile);
+    currentUserRef.current = defaultGuestProfile;
+    showToast('Berhasil keluar dari akun Google.');
   };
 
   const updateRsvpStatus = async (activityId: string, newStatus: RsvpStatusType) => {
@@ -765,6 +1315,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetRegion: string;
     quota?: number | null;
     imageUrl?: string | null;
+    isPinned?: boolean;
+    pinnedAt?: string | null;
+    pinExpiresAt?: string | null;
+    pinDurationLabel?: string | null;
   }) => {
     let initialApproval: ApprovalStatusType = 'PUBLISHED';
     let followUpNote: string | null = null;
@@ -781,6 +1335,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const actId = `ACT-${Date.now() % 10000}`;
+    const isPinnedVal = !!params.isPinned;
+    const pinnedAtVal = isPinnedVal
+      ? params.pinnedAt ||
+        new Date().toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
+
     const newItem: ActivityItem = {
       id: actId,
       title: params.title,
@@ -807,10 +1373,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       needsFollowUp,
       followUpNote,
       isFeatured: false,
+      isPinned: isPinnedVal,
+      pinnedAt: pinnedAtVal,
+      pinExpiresAt: params.pinExpiresAt || null,
+      pinDurationLabel: params.pinDurationLabel || (isPinnedVal ? 'Selamanya' : null),
     };
 
     setActivities((prev) => {
       const updated = [newItem, ...prev];
+      updated.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
       persistActivities(updated);
       return updated;
     });
@@ -846,28 +1417,183 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetRegion: string;
       quota?: number | null;
       imageUrl?: string | null;
+      isPinned?: boolean;
+      pinnedAt?: string | null;
+      pinExpiresAt?: string | null;
+      pinDurationLabel?: string | null;
     }
   ) => {
+    let finalPinned = false;
+    let finalPinnedAt: string | null = null;
+    let finalPinExpiresAt: string | null = null;
+    let finalPinDurationLabel: string | null = null;
+
     setActivities((prev) => {
       const updated = prev.map((item) => {
         if (item.id !== id) return item;
+        const newImageUrl = params.imageUrl !== undefined ? params.imageUrl : item.imageUrl;
+        let newPhotos = item.photos || [];
+        if (params.imageUrl !== undefined) {
+          newPhotos = params.imageUrl
+            ? [params.imageUrl, ...newPhotos.filter((p) => p !== item.imageUrl)]
+            : newPhotos.filter((p) => p !== item.imageUrl);
+        }
+
+        const isPinnedResolved =
+          params.isPinned !== undefined ? params.isPinned : !!item.isPinned;
+
+        let pinnedAtResolved = item.pinnedAt || null;
+        let pinExpiresAtResolved = params.pinExpiresAt !== undefined ? params.pinExpiresAt : (item.pinExpiresAt || null);
+        let pinDurationLabelResolved = params.pinDurationLabel !== undefined ? params.pinDurationLabel : (item.pinDurationLabel || null);
+
+        if (params.isPinned !== undefined) {
+          if (params.isPinned && !item.isPinned) {
+            pinnedAtResolved =
+              params.pinnedAt ||
+              new Date().toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+            pinDurationLabelResolved = params.pinDurationLabel || 'Selamanya';
+          } else if (!params.isPinned) {
+            pinnedAtResolved = null;
+            pinExpiresAtResolved = null;
+            pinDurationLabelResolved = null;
+          }
+        } else if (params.pinnedAt !== undefined) {
+          pinnedAtResolved = params.pinnedAt;
+        }
+
+        finalPinned = isPinnedResolved;
+        finalPinnedAt = pinnedAtResolved;
+        finalPinExpiresAt = pinExpiresAtResolved;
+        finalPinDurationLabel = pinDurationLabelResolved;
+
         return {
           ...item,
           ...params,
-          imageUrl: params.imageUrl !== undefined ? params.imageUrl : item.imageUrl,
+          imageUrl: newImageUrl,
+          photos: newPhotos,
+          isPinned: isPinnedResolved,
+          pinnedAt: pinnedAtResolved,
+          pinExpiresAt: pinExpiresAtResolved,
+          pinDurationLabel: pinDurationLabelResolved,
         };
       });
+      updated.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
       persistActivities(updated);
       return updated;
     });
 
     try {
-      await updateDoc(doc(db, 'activities', id), sanitizeForFirestore(params));
+      const firestoreUpdates = {
+        ...params,
+        isPinned: finalPinned,
+        pinnedAt: finalPinnedAt,
+        pinExpiresAt: finalPinExpiresAt,
+        pinDurationLabel: finalPinDurationLabel,
+        ...(params.imageUrl !== undefined
+          ? {
+              photos: params.imageUrl ? [params.imageUrl] : [],
+            }
+          : {}),
+      };
+      await updateDoc(doc(db, 'activities', id), sanitizeForFirestore(firestoreUpdates));
     } catch (e) {
       console.warn('Gagal update kegiatan di Firestore:', e);
     }
 
     showToast(`Perubahan kegiatan '${params.title}' berhasil diperbarui!`);
+  };
+
+  const deleteActivity = async (activityId: string) => {
+    deletedIdsRef.current.add(activityId);
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.DELETED_ITEMS,
+        JSON.stringify(Array.from(deletedIdsRef.current))
+      );
+    } catch {}
+
+    setActivities((prev) => {
+      const updated = prev.filter((item) => item.id !== activityId);
+      persistActivities(updated);
+      syncHomeScreenWidget(updated, announcements);
+      return updated;
+    });
+
+    try {
+      await deleteDoc(doc(db, 'activities', activityId));
+    } catch (e) {
+      console.warn('Gagal menghapus kegiatan dari Firestore:', e);
+    }
+    showToast('Kegiatan telah berhasil dihapus.');
+  };
+
+  const togglePinActivity = async (
+    activityId: string,
+    durationMs?: number | null,
+    durationLabel?: string | null
+  ) => {
+    let newPinned = false;
+    let newPinnedAt: string | null = null;
+    let newPinExpiresAt: string | null = null;
+    let newPinDurationLabel: string | null = null;
+
+    setActivities((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== activityId) return item;
+        newPinned = !item.isPinned;
+        if (newPinned) {
+          newPinnedAt = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          newPinExpiresAt = durationMs && durationMs > 0
+            ? new Date(Date.now() + durationMs).toISOString()
+            : null;
+          newPinDurationLabel = durationLabel || (durationMs ? 'Sementara' : 'Selamanya');
+        } else {
+          newPinnedAt = null;
+          newPinExpiresAt = null;
+          newPinDurationLabel = null;
+        }
+
+        return {
+          ...item,
+          isPinned: newPinned,
+          pinnedAt: newPinnedAt,
+          pinExpiresAt: newPinExpiresAt,
+          pinDurationLabel: newPinDurationLabel,
+        };
+      });
+      updated.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+      persistActivities(updated);
+      return updated;
+    });
+
+    try {
+      await updateDoc(doc(db, 'activities', activityId), {
+        isPinned: newPinned,
+        pinnedAt: newPinnedAt,
+        pinExpiresAt: newPinExpiresAt,
+        pinDurationLabel: newPinDurationLabel,
+      });
+    } catch (e) {
+      console.warn('Gagal update sematan kegiatan di Firestore:', e);
+    }
+
+    showToast(
+      newPinned
+        ? `Kegiatan disematkan di posisi teratas (${newPinDurationLabel || 'Selamanya'})!`
+        : 'Sematan kegiatan telah dilepas.'
+    );
   };
 
   const rwApproveActivity = async (activityId: string) => {
@@ -1041,7 +1767,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetRegion: string;
     requirements?: string[];
     additionalInfo?: string | null;
+    imageUrl?: string | null;
     formattedDate?: string;
+    isPinned?: boolean;
+    pinnedAt?: string | null;
+    pinExpiresAt?: string | null;
+    pinDurationLabel?: string | null;
   }) => {
     let initialApproval: ApprovalStatusType = 'PUBLISHED';
     if (currentUser.role === 'RT') {
@@ -1051,6 +1782,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const annId = `ANN-${Date.now() % 1000}`;
+    const isPinnedVal =
+      params.isPinned !== undefined
+        ? params.isPinned
+        : params.urgency === 'PENTING' || params.urgency === 'DARURAT';
+
+    const pinnedAtVal = isPinnedVal
+      ? params.pinnedAt ||
+        new Date().toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
+
+    const pinExpiresAtVal = isPinnedVal ? params.pinExpiresAt || null : null;
+    const pinDurationLabelVal = isPinnedVal
+      ? params.pinDurationLabel || (pinExpiresAtVal ? 'Sementara' : 'Selamanya')
+      : null;
+
     const newAnn: AnnouncementItem = {
       id: annId,
       title: params.title,
@@ -1062,12 +1814,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       urgency: params.urgency,
       requirements: params.requirements || [],
       additionalInfo: params.additionalInfo || null,
+      imageUrl: params.imageUrl || null,
       approvalStatus: initialApproval,
-      isPinned: params.urgency === 'PENTING' || params.urgency === 'DARURAT',
+      isPinned: isPinnedVal,
+      pinnedAt: pinnedAtVal,
+      pinExpiresAt: pinExpiresAtVal,
+      pinDurationLabel: pinDurationLabelVal,
     };
 
     setAnnouncements((prev) => {
       const updated = [newAnn, ...prev];
+      updated.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
       persistAnnouncements(updated);
       return updated;
     });
@@ -1096,10 +1853,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetRegion: string;
       requirements?: string[];
       additionalInfo?: string | null;
+      imageUrl?: string | null;
       formattedDate?: string;
+      isPinned?: boolean;
+      pinnedAt?: string | null;
+      pinExpiresAt?: string | null;
+      pinDurationLabel?: string | null;
     }
   ) => {
-    const updates = {
+    let finalPinned = false;
+    let finalPinnedAt: string | null = null;
+    let finalPinExpiresAt: string | null = null;
+    let finalPinDurationLabel: string | null = null;
+
+    setAnnouncements((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== id) return item;
+
+        const isPinnedResolved =
+          params.isPinned !== undefined
+            ? params.isPinned
+            : item.isPinned ?? (params.urgency === 'PENTING' || params.urgency === 'DARURAT');
+
+        let pinnedAtResolved = item.pinnedAt || null;
+        let pinExpiresAtResolved = item.pinExpiresAt || null;
+        let pinDurationLabelResolved = item.pinDurationLabel || null;
+
+        if (params.isPinned !== undefined) {
+          if (params.isPinned && !item.isPinned) {
+            pinnedAtResolved =
+              params.pinnedAt ||
+              new Date().toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+            pinExpiresAtResolved = params.pinExpiresAt || null;
+            pinDurationLabelResolved =
+              params.pinDurationLabel || (params.pinExpiresAt ? 'Sementara' : 'Selamanya');
+          } else if (!params.isPinned) {
+            pinnedAtResolved = null;
+            pinExpiresAtResolved = null;
+            pinDurationLabelResolved = null;
+          } else if (params.isPinned) {
+            if (params.pinExpiresAt !== undefined) pinExpiresAtResolved = params.pinExpiresAt;
+            if (params.pinDurationLabel !== undefined) pinDurationLabelResolved = params.pinDurationLabel;
+          }
+        } else {
+          if (params.pinnedAt !== undefined) pinnedAtResolved = params.pinnedAt;
+          if (params.pinExpiresAt !== undefined) pinExpiresAtResolved = params.pinExpiresAt;
+          if (params.pinDurationLabel !== undefined) pinDurationLabelResolved = params.pinDurationLabel;
+        }
+
+        finalPinned = isPinnedResolved;
+        finalPinnedAt = pinnedAtResolved;
+        finalPinExpiresAt = pinExpiresAtResolved;
+        finalPinDurationLabel = pinDurationLabelResolved;
+
+        return {
+          ...item,
+          ...params,
+          imageUrl: params.imageUrl !== undefined ? params.imageUrl : item.imageUrl,
+          formattedDate: params.formattedDate || item.formattedDate || 'Hari Ini',
+          isPinned: isPinnedResolved,
+          pinnedAt: pinnedAtResolved,
+          pinExpiresAt: pinExpiresAtResolved,
+          pinDurationLabel: pinDurationLabelResolved,
+        };
+      });
+      updated.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+      persistAnnouncements(updated);
+      return updated;
+    });
+
+    const updates: Record<string, any> = {
       title: params.title,
       content: params.content,
       urgency: params.urgency,
@@ -1107,14 +1936,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       requirements: params.requirements || [],
       additionalInfo: params.additionalInfo || null,
       formattedDate: params.formattedDate || 'Hari Ini',
-      isPinned: params.urgency === 'PENTING' || params.urgency === 'DARURAT',
+      isPinned: finalPinned,
+      pinnedAt: finalPinnedAt,
+      pinExpiresAt: finalPinExpiresAt,
+      pinDurationLabel: finalPinDurationLabel,
     };
 
-    setAnnouncements((prev) => {
-      const updated = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
-      persistAnnouncements(updated);
-      return updated;
-    });
+    if (params.imageUrl !== undefined) {
+      updates.imageUrl = params.imageUrl;
+    }
 
     try {
       await updateDoc(doc(db, 'announcements', id), sanitizeForFirestore(updates));
@@ -1122,6 +1952,93 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Gagal update pengumuman di Firestore:', e);
     }
     showToast('Pengumuman berhasil diperbarui!');
+  };
+
+  const deleteAnnouncement = async (announcementId: string) => {
+    deletedIdsRef.current.add(announcementId);
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.DELETED_ITEMS,
+        JSON.stringify(Array.from(deletedIdsRef.current))
+      );
+    } catch {}
+
+    setAnnouncements((prev) => {
+      const updated = prev.filter((item) => item.id !== announcementId);
+      persistAnnouncements(updated);
+      syncHomeScreenWidget(activities, updated);
+      return updated;
+    });
+
+    try {
+      await deleteDoc(doc(db, 'announcements', announcementId));
+    } catch (e) {
+      console.warn('Gagal menghapus pengumuman dari Firestore:', e);
+    }
+    showToast('Pengumuman telah berhasil dihapus.');
+  };
+
+  const togglePinAnnouncement = async (
+    announcementId: string,
+    durationMs?: number | null,
+    durationLabel?: string | null
+  ) => {
+    let newPinned = false;
+    let newPinnedAt: string | null = null;
+    let newPinExpiresAt: string | null = null;
+    let newPinDurationLabel: string | null = null;
+
+    setAnnouncements((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== announcementId) return item;
+        newPinned = !item.isPinned;
+        if (newPinned) {
+          newPinnedAt = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          newPinExpiresAt =
+            durationMs && durationMs > 0
+              ? new Date(Date.now() + durationMs).toISOString()
+              : null;
+          newPinDurationLabel = durationLabel || (durationMs ? 'Sementara' : 'Selamanya');
+        } else {
+          newPinnedAt = null;
+          newPinExpiresAt = null;
+          newPinDurationLabel = null;
+        }
+        return {
+          ...item,
+          isPinned: newPinned,
+          pinnedAt: newPinnedAt,
+          pinExpiresAt: newPinExpiresAt,
+          pinDurationLabel: newPinDurationLabel,
+        };
+      });
+      updated.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+      persistAnnouncements(updated);
+      return updated;
+    });
+
+    try {
+      await updateDoc(doc(db, 'announcements', announcementId), {
+        isPinned: newPinned,
+        pinnedAt: newPinnedAt,
+        pinExpiresAt: newPinExpiresAt,
+        pinDurationLabel: newPinDurationLabel,
+      });
+    } catch (e) {
+      console.warn('Gagal update sematan pengumuman di Firestore:', e);
+    }
+
+    showToast(
+      newPinned
+        ? `Pengumuman disematkan di posisi teratas (${newPinDurationLabel || 'Selamanya'})!`
+        : 'Sematan pengumuman telah dilepas.'
+    );
   };
 
   const rwApproveAnnouncement = async (announcementId: string) => {
@@ -1244,6 +2161,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         currentUser,
+        isLoggedIn,
+        allUsers,
+        isSuperAdmin,
+        updateUserRoleByAdmin,
+        fetchAllUsers,
         activities,
         announcements,
         contacts,
@@ -1260,6 +2182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchRole,
         updateProfile,
         loginWithGoogleProfile,
+        logout,
         createOrUpdateRegionCode,
         toggleRegionCodeStatus,
         deleteRegionCode,
@@ -1272,12 +2195,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteLocationPreset,
         addActivity,
         updateActivity,
+        deleteActivity,
+        togglePinActivity,
         rwApproveActivity,
         rwRejectActivity,
         adminApproveActivity,
         adminRejectActivity,
         addAnnouncement,
         updateAnnouncement,
+        deleteAnnouncement,
+        togglePinAnnouncement,
         rwApproveAnnouncement,
         adminApproveAnnouncement,
         rejectAnnouncement,

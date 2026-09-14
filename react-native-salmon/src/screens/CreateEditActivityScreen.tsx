@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   Modal,
   Platform,
@@ -19,7 +20,12 @@ import { TimePickerModal } from '../components/TimePickerModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
 import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { ActivityCategoryType, ActivityItem, LocationPresetItem } from '../types';
+import {
+  ActivityCategoryType,
+  ActivityItem,
+  LocationPresetItem,
+  PIN_DURATION_OPTIONS,
+} from '../types';
 import { buildActivityApprovalMessage } from '../utils/whatsappHelpers';
 
 interface CreateEditActivityScreenProps {
@@ -38,6 +44,7 @@ export const CreateEditActivityScreen: React.FC<
     locationPresets,
     addActivity,
     updateActivity,
+    deleteActivity,
     showToast,
   } = useApp();
 
@@ -103,6 +110,55 @@ export const CreateEditActivityScreen: React.FC<
   );
   const [isPhotoPickerVisible, setIsPhotoPickerVisible] = useState(false);
 
+  const [isPinned, setIsPinned] = useState<boolean>(existing?.isPinned || false);
+  const [pinnedAt, setPinnedAt] = useState<string | null>(existing?.pinnedAt || null);
+  const [pinDurationMs, setPinDurationMs] = useState<number | null>(
+    existing?.pinExpiresAt ? Math.max(0, new Date(existing.pinExpiresAt).getTime() - Date.now()) : null
+  );
+  const [pinDurationLabel, setPinDurationLabel] = useState<string>(
+    existing?.pinDurationLabel || 'Selamanya'
+  );
+
+  const handleTogglePin = () => {
+    if (!isPinned) {
+      const nowFormatted = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      setIsPinned(true);
+      setPinnedAt(nowFormatted);
+      showToast('Kegiatan disetel untuk disematkan di posisi paling atas.');
+    } else {
+      setIsPinned(false);
+      setPinnedAt(null);
+      setPinDurationMs(null);
+      setPinDurationLabel('Selamanya');
+      showToast('Sematan kegiatan dilepas.');
+    }
+  };
+
+  const handleDeleteActivity = () => {
+    if (!editId) return;
+    Alert.alert(
+      'Hapus Kegiatan',
+      `Apakah Anda yakin ingin menghapus kegiatan "${title.trim() || existing?.title}" ini secara permanen?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Ya, Hapus Kegiatan',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteActivity(editId);
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  };
+
   const categories: ActivityCategoryType[] = [
     'POSYANDU',
     'KERJA_BAKTI',
@@ -151,11 +207,17 @@ export const CreateEditActivityScreen: React.FC<
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        quality: 0.85,
+        aspect: [16, 9],
+        quality: 0.5,
+        base64: true,
       });
-      if (!result.canceled && result.assets && result.assets[0]?.uri) {
-        setPhotoUri(result.assets[0].uri);
-        showToast('Foto poster kegiatan dipilih!');
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const onlineUri = asset.base64
+          ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+          : asset.uri;
+        setPhotoUri(onlineUri);
+        showToast('Foto poster kegiatan berhasil diproses & siap disimpan online!');
       }
     } catch (e) {
       console.warn('Gallery error:', e);
@@ -173,11 +235,17 @@ export const CreateEditActivityScreen: React.FC<
       }
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        quality: 0.85,
+        aspect: [16, 9],
+        quality: 0.5,
+        base64: true,
       });
-      if (!result.canceled && result.assets && result.assets[0]?.uri) {
-        setPhotoUri(result.assets[0].uri);
-        showToast('Foto poster kegiatan diambil!');
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const onlineUri = asset.base64
+          ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+          : asset.uri;
+        setPhotoUri(onlineUri);
+        showToast('Foto kamera berhasil diproses & siap disimpan online!');
       }
     } catch (e) {
       console.warn('Camera error:', e);
@@ -225,6 +293,12 @@ export const CreateEditActivityScreen: React.FC<
       approvalStatus: currentUser.role === 'RT' ? 'WAITING_RW_APPROVAL' : currentUser.role === 'RW' ? 'WAITING_ADMIN_APPROVAL' : 'PUBLISHED',
     };
 
+    const calculatedPinExpiresAt =
+      isPinned && pinDurationMs && pinDurationMs > 0
+        ? new Date(Date.now() + pinDurationMs).toISOString()
+        : null;
+    const calculatedPinDurationLabel = isPinned ? pinDurationLabel : null;
+
     if (editId && existing) {
       updateActivity(editId, {
         title: title.trim(),
@@ -240,6 +314,10 @@ export const CreateEditActivityScreen: React.FC<
         targetRegion: targetRegion.trim(),
         quota: finalQuota,
         imageUrl: photoUri,
+        isPinned,
+        pinnedAt,
+        pinExpiresAt: calculatedPinExpiresAt,
+        pinDurationLabel: calculatedPinDurationLabel,
       });
     } else {
       addActivity({
@@ -256,6 +334,10 @@ export const CreateEditActivityScreen: React.FC<
         targetRegion: targetRegion.trim(),
         quota: finalQuota,
         imageUrl: photoUri,
+        isPinned,
+        pinnedAt,
+        pinExpiresAt: calculatedPinExpiresAt,
+        pinDurationLabel: calculatedPinDurationLabel,
       });
     }
 
@@ -721,6 +803,89 @@ export const CreateEditActivityScreen: React.FC<
           </TouchableOpacity>
         )}
 
+        {/* FITUR SEMATKAN KEGIATAN */}
+        <View style={[styles.pinSectionCard, isPinned && styles.pinSectionCardActive]}>
+          <View style={styles.pinSectionHeader}>
+            <View style={styles.pinHeaderLeft}>
+              <View style={[styles.pinIconCircle, isPinned && styles.pinIconCircleActive]}>
+                <MaterialCommunityIcons
+                  name={isPinned ? 'pin' : 'pin-outline'}
+                  size={20}
+                  color={isPinned ? '#B45309' : Colors.skyBlueHeader}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={styles.pinTitleRow}>
+                  <Text style={styles.pinSectionTitle}>Sematkan di Atas</Text>
+                  {isPinned && (
+                    <View style={styles.pinnedStatusPill}>
+                      <Text style={styles.pinnedStatusPillText}>📌 Tersemat</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.pinSectionSub} numberOfLines={2}>
+                  {isPinned
+                    ? `Disematkan: ${pinnedAt || 'Baru saja'}`
+                    : 'Tampilkan kegiatan ini di posisi paling atas'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.pinToggleBtn,
+                isPinned ? styles.pinToggleBtnActive : styles.pinToggleBtnInactive,
+              ]}
+              activeOpacity={0.8}
+              onPress={handleTogglePin}
+            >
+              <MaterialCommunityIcons
+                name={isPinned ? 'pin-off' : 'pin'}
+                size={15}
+                color={isPinned ? '#DC2626' : Colors.skyBlueHeader}
+              />
+              <Text style={[styles.pinToggleBtnText, isPinned && { color: '#DC2626' }]}>
+                {isPinned ? 'Lepas' : 'Sematkan'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Duration Chips for Pinning */}
+          {isPinned && (
+            <View style={styles.pinDurationContainer}>
+              <Text style={styles.pinDurationTitle}>BATAS DURASI SEMATAN:</Text>
+              <View style={styles.pinDurationChipsRow}>
+                {PIN_DURATION_OPTIONS.map((opt) => {
+                  const isSel = pinDurationLabel === opt.label;
+                  return (
+                    <TouchableOpacity
+                      key={opt.label}
+                      style={[
+                        styles.pinDurationChip,
+                        isSel && styles.pinDurationChipActive,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setPinDurationMs(opt.ms);
+                        setPinDurationLabel(opt.label);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.pinDurationChipText,
+                          isSel && styles.pinDurationChipTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+        </View>
+
         {/* 7. SAVE BUTTON */}
         <TouchableOpacity
           style={styles.saveButton}
@@ -736,6 +901,22 @@ export const CreateEditActivityScreen: React.FC<
             {editId ? 'Simpan Perubahan Kegiatan' : 'Publikasikan Kegiatan'}
           </Text>
         </TouchableOpacity>
+
+        {/* TOMBOL HAPUS KEGIATAN (KHUSUS MODE EDIT) */}
+        {editId && existing && (
+          <TouchableOpacity
+            style={styles.deleteActivityButton}
+            activeOpacity={0.85}
+            onPress={handleDeleteActivity}
+          >
+            <MaterialCommunityIcons
+              name="trash-can-outline"
+              size={20}
+              color="#DC2626"
+            />
+            <Text style={styles.deleteActivityButtonText}>Hapus Kegiatan Ini</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* 8. CATEGORY SELECTION MODAL */}
@@ -1466,5 +1647,151 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.textNavyMuted,
+  },
+  pinSectionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    padding: 16,
+    marginBottom: 16,
+  },
+  pinSectionCardActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+  },
+  pinSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  pinHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  pinIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.skyBlueSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinIconCircleActive: {
+    backgroundColor: '#FEF3C7',
+  },
+  pinTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  pinSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+  },
+  pinnedStatusPill: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  pinnedStatusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  pinSectionSub: {
+    fontSize: 12,
+    color: Colors.textNavyMuted,
+    marginTop: 3,
+  },
+  pinToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  pinToggleBtnInactive: {
+    backgroundColor: Colors.skyBlueSurface,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueHeader,
+  },
+  pinToggleBtnActive: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  pinToggleBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+  },
+  pinDurationContainer: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginTop: 12,
+  },
+  pinDurationTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  pinDurationChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  pinDurationChip: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  pinDurationChipActive: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#D97706',
+  },
+  pinDurationChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  pinDurationChipTextActive: {
+    color: Colors.white,
+  },
+  deleteActivityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  deleteActivityButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });

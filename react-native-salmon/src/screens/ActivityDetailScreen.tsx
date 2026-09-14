@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Image,
   Linking,
   Modal,
+  NativeModules,
   Platform,
   ScrollView,
   Share,
@@ -55,6 +56,11 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [mediaFilter, setMediaFilter] = useState<MediaFilterType>('ALL');
   const [isWhatsAppModalVisible, setIsWhatsAppModalVisible] = useState(false);
+  const [heroImageError, setHeroImageError] = useState(false);
+
+  useEffect(() => {
+    setHeroImageError(false);
+  }, [activityId]);
 
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
   const [pendingRsvpStatus, setPendingRsvpStatus] = useState<RsvpStatusType | null>(null);
@@ -118,6 +124,18 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         `📌 Sasaran: ${activity.targetRegion}\n\n` +
         `${activity.description}`;
 
+      if (
+        Platform.OS === 'android' &&
+        activity.imageUrl &&
+        NativeModules.WidgetUpdateModule?.shareToWhatsAppWithImage
+      ) {
+        await NativeModules.WidgetUpdateModule.shareToWhatsAppWithImage(
+          activity.imageUrl,
+          shareMessage
+        );
+        return;
+      }
+
       await Share.share({
         title: activity.title,
         message: shareMessage,
@@ -140,11 +158,16 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        quality: 0.85,
+        quality: 0.5,
+        base64: true,
       });
 
-      if (!result.canceled && result.assets && result.assets[0]?.uri) {
-        addDocumentationPhoto(activity.id, result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const onlineUri = asset.base64
+          ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+          : asset.uri;
+        addDocumentationPhoto(activity.id, onlineUri);
       }
     } catch (e) {
       console.warn('Picker error:', e);
@@ -163,11 +186,16 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        quality: 0.85,
+        quality: 0.5,
+        base64: true,
       });
 
-      if (!result.canceled && result.assets && result.assets[0]?.uri) {
-        addDocumentationPhoto(activity.id, result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const onlineUri = asset.base64
+          ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+          : asset.uri;
+        addDocumentationPhoto(activity.id, onlineUri);
       }
     } catch (e) {
       console.warn('Camera error:', e);
@@ -315,13 +343,17 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* HERO THUMBNAIL POSTER DI PALING ATAS */}
-        {heroThumbnailUrl ? (
+        {heroThumbnailUrl && !heroImageError ? (
           <TouchableOpacity
             style={styles.heroThumbnailCard}
             activeOpacity={0.9}
             onPress={() => setPreviewPhotoUrl(heroThumbnailUrl)}
           >
-            <Image source={{ uri: heroThumbnailUrl }} style={styles.heroThumbnailImage} />
+            <Image
+              source={{ uri: heroThumbnailUrl }}
+              style={styles.heroThumbnailImage}
+              onError={() => setHeroImageError(true)}
+            />
             <View style={styles.heroThumbnailGradientOverlay} />
 
             {/* Badges on top of thumbnail */}

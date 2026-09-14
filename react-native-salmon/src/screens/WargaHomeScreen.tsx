@@ -12,6 +12,7 @@ import { AnnouncementCard } from '../components/AnnouncementCard';
 import { VerificationModal } from '../components/VerificationModal';
 import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import { isItemPinned } from '../types';
 
 interface WargaHomeScreenProps {
   navigation: any;
@@ -23,10 +24,13 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
 
   // Warga only sees PUBLISHED activities and announcements
   const publishedActivities = activities.filter((a) => a.approvalStatus === 'PUBLISHED');
-  const upcomingActivities = publishedActivities.slice(0, 4);
+  const sortedActivities = [...publishedActivities].sort(
+    (a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0)
+  );
+  const upcomingActivities = sortedActivities.slice(0, 4);
 
   const publishedAnnouncements = announcements.filter((a) => a.approvalStatus === 'PUBLISHED');
-  const pinnedAnnouncements = publishedAnnouncements.filter((a) => a.isPinned);
+  const pinnedAnnouncements = publishedAnnouncements.filter((a) => isItemPinned(a));
   const displayAnnouncements =
     pinnedAnnouncements.length > 0
       ? pinnedAnnouncements

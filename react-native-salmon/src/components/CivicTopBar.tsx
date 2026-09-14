@@ -1,24 +1,20 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Fonts } from '../constants/theme';
 import { UserRoleType } from '../types';
 
 interface CivicTopBarProps {
-  currentRole: UserRoleType;
-  roleTitle: string;
-  userName: string;
-  onRoleClick: () => void;
-  onProfileClick: () => void;
+  currentRole?: UserRoleType;
+  roleTitle?: string;
+  userName?: string;
+  onRoleClick?: () => void;
+  onProfileClick?: () => void;
   titleOverride?: string;
 }
 
 export const CivicTopBar: React.FC<CivicTopBarProps> = ({
-  roleTitle,
-  userName,
-  onRoleClick,
-  onProfileClick,
   titleOverride,
 }) => {
   const insets = useSafeAreaInsets();
@@ -27,49 +23,33 @@ export const CivicTopBar: React.FC<CivicTopBarProps> = ({
     <View
       style={[
         styles.container,
-        { paddingTop: Math.max(insets.top, 10) + 4, paddingBottom: 10 },
+        { paddingTop: Math.max(insets.top, 12) + 4, paddingBottom: 12 },
       ]}
     >
       <View style={styles.titleSection}>
         <View style={styles.iconBox}>
-          <MaterialCommunityIcons name="city" size={20} color={Colors.white} />
+          <MaterialCommunityIcons name="office-building" size={22} color={Colors.white} />
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.mainTitle} numberOfLines={1}>
             {titleOverride || 'Kegiatan Kelurahan'}
           </Text>
-          <Text style={styles.subTitle}>Sukamaju • RW 05</Text>
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subTitle}>Sukamaju • RW 05</Text>
+            <View style={styles.activeDot} />
+            <Text style={styles.activeStatusText}>Aktif</Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.actionSection}>
-        {/* Role Pill Switcher */}
-        <TouchableOpacity
-          style={styles.rolePill}
-          activeOpacity={0.8}
-          onPress={onRoleClick}
-        >
-          <View style={styles.roleDot} />
-          <Text style={styles.roleText} numberOfLines={1}>
-            {roleTitle}
-          </Text>
-          <MaterialCommunityIcons
-            name="swap-vertical"
-            size={16}
-            color={Colors.onYellowContainer}
-          />
-        </TouchableOpacity>
-
-        {/* Profile Avatar Button */}
-        <TouchableOpacity
-          style={styles.avatarButton}
-          activeOpacity={0.8}
-          onPress={onProfileClick}
-        >
-          <Text style={styles.avatarLetter}>
-            {userName ? userName.charAt(0).toUpperCase() : 'U'}
-          </Text>
-        </TouchableOpacity>
+      {/* Badge Resmi Kelurahan - Elegan, Bersih, dan Berwibawa */}
+      <View style={styles.officialBadge}>
+        <MaterialCommunityIcons
+          name="shield-check"
+          size={15}
+          color={Colors.skyBlueHeader}
+        />
+        <Text style={styles.officialBadgeText}>Portal Resmi</Text>
       </View>
     </View>
   );
@@ -79,88 +59,85 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.white,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: '#E2E8F0',
     elevation: 3,
-    shadowColor: Colors.black,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
   },
   titleSection: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 8,
+    marginRight: 10,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: Colors.skyBlueHeader,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    shadowColor: Colors.skyBlueHeader,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 2,
   },
   textContainer: {
     flex: 1,
   },
   mainTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     fontFamily: Fonts.headingBold,
     color: Colors.textNavyDark,
+    letterSpacing: -0.3,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
   subTitle: {
     fontSize: 12,
     fontFamily: Fonts.bodyMedium,
     color: Colors.textNavyMuted,
   },
-  actionSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  activeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#10B981', // green online dot
+    marginHorizontal: 6,
   },
-  rolePill: {
+  activeStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: Fonts.bodyBold,
+    color: '#059669',
+  },
+  officialBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: '#F0F9FF',
     borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
+    borderColor: '#BAE6FD',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 20,
     gap: 5,
   },
-  roleDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.onYellowContainer,
-  },
-  roleText: {
+  officialBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: Fonts.headingBold,
-    color: Colors.onYellowContainer,
-  },
-  avatarButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.skyBlueSurfaceVariant,
-    borderWidth: 1,
-    borderColor: Colors.skyBlueBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    fontSize: 15,
-    fontWeight: '800',
     fontFamily: Fonts.headingBold,
     color: Colors.skyBlueHeader,
   },

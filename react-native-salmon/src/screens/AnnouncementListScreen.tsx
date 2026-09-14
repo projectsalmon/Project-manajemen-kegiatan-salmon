@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   FlatList,
+  Image,
   Modal,
   ScrollView,
   Share,
@@ -10,23 +12,32 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AnnouncementCard } from '../components/AnnouncementCard';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { TimePickerModal } from '../components/TimePickerModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
+import { PinDurationModal } from '../components/PinDurationModal';
 import { Colors, UrgencyMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { AnnouncementItem, AnnouncementUrgencyType } from '../types';
+import {
+  AnnouncementItem,
+  AnnouncementUrgencyType,
+  PIN_DURATION_OPTIONS,
+  isItemPinned,
+} from '../types';
 import { buildAnnouncementApprovalMessage } from '../utils/whatsappHelpers';
 
-export const AnnouncementListScreen: React.FC = () => {
+export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => {
   const {
     currentUser,
     contacts,
     announcements,
     addAnnouncement,
     updateAnnouncement,
+    deleteAnnouncement,
+    togglePinAnnouncement,
     showToast,
   } = useApp();
 
@@ -40,6 +51,18 @@ export const AnnouncementListScreen: React.FC = () => {
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] =
     useState<AnnouncementItem | null>(null);
+  const [isPinDurationModalVisible, setIsPinDurationModalVisible] = useState(false);
+
+  // Auto open announcement detail if opened from a notification tap
+  useEffect(() => {
+    const targetId = route?.params?.selectedAnnouncementId;
+    if (targetId && announcements.length > 0) {
+      const found = announcements.find((a) => a.id === targetId);
+      if (found) {
+        setSelectedForDetail(found);
+      }
+    }
+  }, [route?.params?.selectedAnnouncementId, announcements]);
 
   const [waModalData, setWaModalData] = useState<{
     visible: boolean;
@@ -62,6 +85,11 @@ export const AnnouncementListScreen: React.FC = () => {
   const [formTargetRegion, setFormTargetRegion] = useState('RW 05 Sukamaju');
   const [formRequirements, setFormRequirements] = useState('');
   const [formAdditionalInfo, setFormAdditionalInfo] = useState('');
+  const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
+  const [formIsPinned, setFormIsPinned] = useState(false);
+  const [formPinnedAt, setFormPinnedAt] = useState<string | null>(null);
+  const [formPinDurationMs, setFormPinDurationMs] = useState<number | null>(null);
+  const [formPinDurationLabel, setFormPinDurationLabel] = useState<string>('Selamanya');
 
   // Date & Time Picker states for Announcement
   const [formDate, setFormDate] = useState('Minggu, 18 Mei 2025');
@@ -101,6 +129,11 @@ export const AnnouncementListScreen: React.FC = () => {
     setFormTargetRegion('RW 05 Sukamaju');
     setFormRequirements('');
     setFormAdditionalInfo('');
+    setFormImageUrl(null);
+    setFormIsPinned(false);
+    setFormPinnedAt(null);
+    setFormPinDurationMs(null);
+    setFormPinDurationLabel('Selamanya');
     setFormDate('Minggu, 18 Mei 2025');
     setFormDateIso('2025-05-18');
     setFormTime('08:00 - 11:00 WIB');
@@ -115,11 +148,131 @@ export const AnnouncementListScreen: React.FC = () => {
     setFormTargetRegion(ann.targetRegion);
     setFormRequirements(ann.requirements ? ann.requirements.join(', ') : '');
     setFormAdditionalInfo(ann.additionalInfo || '');
+    setFormImageUrl(ann.imageUrl || null);
+    setFormIsPinned(!!ann.isPinned);
+    setFormPinnedAt(ann.pinnedAt || null);
+    setFormPinDurationMs(
+      ann.pinExpiresAt ? Math.max(0, new Date(ann.pinExpiresAt).getTime() - Date.now()) : null
+    );
+    setFormPinDurationLabel(ann.pinDurationLabel || 'Selamanya');
     setFormDate(ann.formattedDate || 'Minggu, 18 Mei 2025');
     setFormDateIso('2025-05-18');
     setFormTime('08:00 - 11:00 WIB');
     setSelectedForDetail(null);
     setIsFormModalVisible(true);
+  };
+
+  const promptPhotoPicker = () => {
+    Alert.alert(
+      'Pilih Foto Thumbnail Pengumuman',
+      'Pilih sumber foto pengumuman:',
+      [
+        {
+          text: 'Kamera HP',
+          onPress: async () => {
+            try {
+              const perm = await ImagePicker.requestCameraPermissionsAsync();
+              if (!perm.granted) {
+                Alert.alert(
+                  'Izin Kamera Diperlukan',
+                  'Aplikasi membutuhkan izin kamera untuk mengambil foto thumbnail pengumuman.'
+                );
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [16, 9],
+                quality: 0.35,
+                base64: true,
+              });
+              if (!result.canceled && result.assets.length > 0) {
+                const asset = result.assets[0];
+                const onlineUri = asset.base64
+                  ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+                  : asset.uri;
+                setFormImageUrl(onlineUri);
+                showToast('Foto thumbnail berhasil dipilih.');
+              }
+            } catch (err) {
+              console.warn('Gagal buka kamera:', err);
+            }
+          },
+        },
+        {
+          text: 'Galeri Foto',
+          onPress: async () => {
+            try {
+              const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!perm.granted) {
+                Alert.alert(
+                  'Izin Galeri Diperlukan',
+                  'Aplikasi membutuhkan izin galeri untuk memilih foto thumbnail pengumuman.'
+                );
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: [16, 9],
+                quality: 0.35,
+                base64: true,
+              });
+              if (!result.canceled && result.assets.length > 0) {
+                const asset = result.assets[0];
+                const onlineUri = asset.base64
+                  ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+                  : asset.uri;
+                setFormImageUrl(onlineUri);
+                showToast('Foto thumbnail berhasil dipilih.');
+              }
+            } catch (err) {
+              console.warn('Gagal buka galeri:', err);
+            }
+          },
+        },
+        { text: 'Batal', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleTogglePinForm = () => {
+    if (!formIsPinned) {
+      const nowFormatted = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      setFormIsPinned(true);
+      setFormPinnedAt(nowFormatted);
+      showToast('Pengumuman disetel untuk disematkan di posisi teratas.');
+    } else {
+      setFormIsPinned(false);
+      setFormPinnedAt(null);
+      setFormPinDurationMs(null);
+      setFormPinDurationLabel('Selamanya');
+      showToast('Sematan pengumuman dilepas.');
+    }
+  };
+
+  const handleDeleteAnnouncement = (annId: string, annTitle: string) => {
+    Alert.alert(
+      'Hapus Pengumuman',
+      `Apakah Anda yakin ingin menghapus pengumuman "${annTitle}" ini secara permanen?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Ya, Hapus Pengumuman',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteAnnouncement(annId);
+            setIsFormModalVisible(false);
+            setSelectedForDetail(null);
+          },
+        },
+      ]
+    );
   };
 
   const handleSaveForm = () => {
@@ -137,6 +290,12 @@ export const AnnouncementListScreen: React.FC = () => {
 
     const isWaitingApproval = currentUser.role === 'RT' || currentUser.role === 'RW';
 
+    const calculatedPinExpiresAt =
+      formIsPinned && formPinDurationMs && formPinDurationMs > 0
+        ? new Date(Date.now() + formPinDurationMs).toISOString()
+        : null;
+    const calculatedPinDurationLabel = formIsPinned ? formPinDurationLabel : null;
+
     const tempAnnouncement: AnnouncementItem = {
       id: editingAnnouncement?.id || `ANN-${Date.now() % 1000}`,
       title: formTitle.trim(),
@@ -148,13 +307,17 @@ export const AnnouncementListScreen: React.FC = () => {
       authorName: currentUser.name,
       requirements: reqList,
       additionalInfo: formAdditionalInfo ? formAdditionalInfo.trim() : null,
+      imageUrl: formImageUrl || null,
       approvalStatus:
         currentUser.role === 'RT'
           ? 'WAITING_RW_APPROVAL'
           : currentUser.role === 'RW'
           ? 'WAITING_ADMIN_APPROVAL'
           : 'PUBLISHED',
-      isPinned: false,
+      isPinned: formIsPinned,
+      pinnedAt: formPinnedAt,
+      pinExpiresAt: calculatedPinExpiresAt,
+      pinDurationLabel: calculatedPinDurationLabel,
     };
 
     if (editingAnnouncement) {
@@ -165,7 +328,12 @@ export const AnnouncementListScreen: React.FC = () => {
         targetRegion: formTargetRegion.trim(),
         requirements: reqList,
         additionalInfo: formAdditionalInfo ? formAdditionalInfo.trim() : null,
+        imageUrl: formImageUrl || null,
         formattedDate: finalFormattedDate,
+        isPinned: formIsPinned,
+        pinnedAt: formPinnedAt,
+        pinExpiresAt: calculatedPinExpiresAt,
+        pinDurationLabel: calculatedPinDurationLabel,
       });
     } else {
       addAnnouncement({
@@ -175,7 +343,12 @@ export const AnnouncementListScreen: React.FC = () => {
         targetRegion: formTargetRegion.trim(),
         requirements: reqList,
         additionalInfo: formAdditionalInfo ? formAdditionalInfo.trim() : null,
+        imageUrl: formImageUrl || null,
         formattedDate: finalFormattedDate,
+        isPinned: formIsPinned,
+        pinnedAt: formPinnedAt,
+        pinExpiresAt: calculatedPinExpiresAt,
+        pinDurationLabel: calculatedPinDurationLabel,
       });
     }
 
@@ -370,6 +543,15 @@ export const AnnouncementListScreen: React.FC = () => {
               </View>
 
               <ScrollView style={styles.detailModalScroll}>
+                {selectedForDetail.imageUrl ? (
+                  <View style={styles.detailImageContainer}>
+                    <Image
+                      source={{ uri: selectedForDetail.imageUrl }}
+                      style={styles.detailBannerImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : null}
                 <Text style={styles.detailModalTitle}>
                   {selectedForDetail.title}
                 </Text>
@@ -457,41 +639,159 @@ export const AnnouncementListScreen: React.FC = () => {
               </ScrollView>
 
               <View style={styles.detailModalFooter}>
-                <TouchableOpacity
-                  style={styles.detailShareBtn}
-                  onPress={() => handleShareDetail(selectedForDetail)}
-                >
-                  <MaterialCommunityIcons
-                    name="share-variant"
-                    size={20}
-                    color={Colors.skyBlueHeader}
-                  />
-                </TouchableOpacity>
-
                 {isAdmin && (
+                  <View style={styles.detailAdminActionsRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.detailAdminBtn,
+                        styles.detailPinBtn,
+                        isItemPinned(selectedForDetail) && styles.detailPinBtnActive,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={async () => {
+                        if (isItemPinned(selectedForDetail)) {
+                          await togglePinAnnouncement(selectedForDetail.id);
+                          setSelectedForDetail((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  isPinned: false,
+                                  pinnedAt: null,
+                                  pinExpiresAt: null,
+                                  pinDurationLabel: null,
+                                }
+                              : null
+                          );
+                        } else {
+                          setIsPinDurationModalVisible(true);
+                        }
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name={isItemPinned(selectedForDetail) ? 'pin-off' : 'pin'}
+                        size={16}
+                        color={
+                          isItemPinned(selectedForDetail)
+                            ? '#B45309'
+                            : Colors.skyBlueHeader
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.detailAdminBtnText,
+                          isItemPinned(selectedForDetail) && { color: '#B45309' },
+                        ]}
+                      >
+                        {isItemPinned(selectedForDetail) ? 'Lepas' : 'Sematkan'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.detailAdminBtn, styles.detailEditBtn]}
+                      activeOpacity={0.8}
+                      onPress={() => handleOpenEdit(selectedForDetail)}
+                    >
+                      <MaterialCommunityIcons
+                        name="pencil"
+                        size={16}
+                        color={Colors.skyBlueHeader}
+                      />
+                      <Text
+                        style={[
+                          styles.detailAdminBtnText,
+                          { color: Colors.skyBlueHeader },
+                        ]}
+                      >
+                        Edit
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.detailAdminBtn, styles.detailDeleteBtn]}
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        handleDeleteAnnouncement(
+                          selectedForDetail.id,
+                          selectedForDetail.title
+                        )
+                      }
+                    >
+                      <MaterialCommunityIcons
+                        name="trash-can-outline"
+                        size={16}
+                        color="#DC2626"
+                      />
+                      <Text style={[styles.detailAdminBtnText, { color: '#DC2626' }]}>
+                        Hapus
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <View style={styles.detailMainActionsRow}>
                   <TouchableOpacity
-                    style={styles.detailEditBtn}
-                    onPress={() => handleOpenEdit(selectedForDetail)}
+                    style={styles.detailShareWideBtn}
+                    activeOpacity={0.8}
+                    onPress={() => handleShareDetail(selectedForDetail)}
                   >
                     <MaterialCommunityIcons
-                      name="pencil"
+                      name="share-variant"
                       size={18}
                       color={Colors.skyBlueHeader}
                     />
-                    <Text style={styles.detailEditBtnText}>Edit</Text>
+                    <Text style={styles.detailShareWideBtnText}>
+                      Bagikan Pengumuman
+                    </Text>
                   </TouchableOpacity>
-                )}
 
-                <TouchableOpacity
-                  style={styles.detailCloseBtn}
-                  onPress={() => setSelectedForDetail(null)}
-                >
-                  <Text style={styles.detailCloseBtnText}>Tutup</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.detailCloseBtn}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedForDetail(null)}
+                  >
+                    <Text style={styles.detailCloseBtnText}>Tutup</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
         </Modal>
+      )}
+
+      {/* MODAL PILIH DURASI SEMATAN */}
+      {selectedForDetail && (
+        <PinDurationModal
+          visible={isPinDurationModalVisible}
+          itemTitle={selectedForDetail.title}
+          onClose={() => setIsPinDurationModalVisible(false)}
+          onConfirm={async (durationMs, durationLabel) => {
+            if (!selectedForDetail) return;
+            await togglePinAnnouncement(
+              selectedForDetail.id,
+              durationMs,
+              durationLabel
+            );
+            setSelectedForDetail((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    isPinned: true,
+                    pinnedAt: new Date().toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                    pinExpiresAt: durationMs
+                      ? new Date(Date.now() + durationMs).toISOString()
+                      : null,
+                    pinDurationLabel: durationLabel,
+                  }
+                : null
+            );
+          }}
+        />
       )}
 
       {/* 6. CREATE / EDIT ANNOUNCEMENT MODAL */}
@@ -513,6 +813,66 @@ export const AnnouncementListScreen: React.FC = () => {
               style={styles.formScroll}
               showsVerticalScrollIndicator={false}
             >
+              {/* Photo Thumbnail Picker */}
+              <View style={styles.formPhotoSection}>
+                <Text style={styles.formLabel}>Foto / Thumbnail Pengumuman (Opsional)</Text>
+                {formImageUrl ? (
+                  <View style={styles.formPhotoPreviewWrapper}>
+                    <Image
+                      source={{ uri: formImageUrl }}
+                      style={styles.formPhotoPreviewImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.formPhotoActionsRow}>
+                      <TouchableOpacity
+                        style={styles.formPhotoChangeBtn}
+                        activeOpacity={0.8}
+                        onPress={promptPhotoPicker}
+                      >
+                        <MaterialCommunityIcons
+                          name="camera-retake-outline"
+                          size={16}
+                          color={Colors.white}
+                        />
+                        <Text style={styles.formPhotoChangeBtnText}>Ganti Foto</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.formPhotoDeleteBtn}
+                        activeOpacity={0.8}
+                        onPress={() => setFormImageUrl(null)}
+                      >
+                        <MaterialCommunityIcons
+                          name="trash-can-outline"
+                          size={16}
+                          color="#DC2626"
+                        />
+                        <Text style={styles.formPhotoDeleteBtnText}>Hapus Foto</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.formPhotoPickerBox}
+                    activeOpacity={0.8}
+                    onPress={promptPhotoPicker}
+                  >
+                    <View style={styles.formPhotoPickerIconCircle}>
+                      <MaterialCommunityIcons
+                        name="camera-plus-outline"
+                        size={24}
+                        color={Colors.skyBlueHeader}
+                      />
+                    </View>
+                    <Text style={styles.formPhotoPickerTitle}>
+                      Unggah Foto / Thumbnail Pengumuman
+                    </Text>
+                    <Text style={styles.formPhotoPickerSub}>
+                      Pilih Kamera atau Galeri HP • Otomatis dikompres
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <View style={styles.formField}>
                 <Text style={styles.formLabel}>Judul Pengumuman *</Text>
                 <TextInput
@@ -632,6 +992,130 @@ export const AnnouncementListScreen: React.FC = () => {
                   ))}
                 </View>
               </View>
+
+              {/* Fitur Sematkan Pengumuman */}
+              <View
+                style={[
+                  styles.formPinBox,
+                  formIsPinned && styles.formPinBoxActive,
+                ]}
+              >
+                <View style={styles.formPinTopRow}>
+                  <View style={styles.formPinLeft}>
+                    <View
+                      style={[
+                        styles.formPinIconCircle,
+                        formIsPinned && styles.formPinIconCircleActive,
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={formIsPinned ? 'pin' : 'pin-outline'}
+                        size={18}
+                        color={formIsPinned ? '#B45309' : Colors.skyBlueHeader}
+                      />
+                    </View>
+                    <View style={styles.formPinTextWrapper}>
+                      <View style={styles.formPinTitleRow}>
+                        <Text style={styles.formPinTitle} numberOfLines={1}>
+                          Sematkan di Atas
+                        </Text>
+                        {formIsPinned && (
+                          <View style={styles.formPinnedBadge}>
+                            <Text style={styles.formPinnedBadgeText}>📌 Tersemat</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.formPinSub} numberOfLines={1}>
+                        {formIsPinned
+                          ? `Durasi: ${formPinDurationLabel}`
+                          : 'Tampil di posisi paling atas'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.formPinToggle,
+                      formIsPinned ? styles.formPinToggleActive : styles.formPinToggleInactive,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={handleTogglePinForm}
+                  >
+                    <MaterialCommunityIcons
+                      name={formIsPinned ? 'pin-off' : 'pin'}
+                      size={15}
+                      color={formIsPinned ? '#DC2626' : Colors.skyBlueHeader}
+                    />
+                    <Text
+                      style={[
+                        styles.formPinToggleText,
+                        formIsPinned && { color: '#DC2626' },
+                      ]}
+                    >
+                      {formIsPinned ? 'Lepas' : 'Sematkan'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Duration Chips for Pinning */}
+                {formIsPinned && (
+                  <View style={styles.formPinDurationBox}>
+                    <Text style={styles.formPinDurationTitle}>
+                      BATAS DURASI SEMATAN:
+                    </Text>
+                    <View style={styles.formPinDurationChips}>
+                      {PIN_DURATION_OPTIONS.map((opt) => {
+                        const isSel = formPinDurationLabel === opt.label;
+                        return (
+                          <TouchableOpacity
+                            key={opt.label}
+                            style={[
+                              styles.durationChip,
+                              isSel && styles.durationChipActive,
+                            ]}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                              setFormPinDurationMs(opt.ms);
+                              setFormPinDurationLabel(opt.label);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.durationChipText,
+                                isSel && styles.durationChipTextActive,
+                              ]}
+                            >
+                              {opt.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* Tombol Hapus Pengumuman (Khusus Saat Edit) */}
+              {editingAnnouncement && (
+                <TouchableOpacity
+                  style={styles.formDeleteBtn}
+                  onPress={() =>
+                    handleDeleteAnnouncement(
+                      editingAnnouncement.id,
+                      editingAnnouncement.title
+                    )
+                  }
+                >
+                  <MaterialCommunityIcons
+                    name="trash-can-outline"
+                    size={18}
+                    color="#DC2626"
+                  />
+                  <Text style={styles.formDeleteBtnText}>
+                    Hapus Pengumuman Ini
+                  </Text>
+                </TouchableOpacity>
+              )}
             </ScrollView>
 
             <View style={styles.formModalActions}>
@@ -798,7 +1282,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 22,
     padding: 18,
-    maxHeight: '80%',
+    maxHeight: '85%',
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    overflow: 'hidden',
   },
   detailModalHeader: {
     flexDirection: 'row',
@@ -912,31 +1400,78 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   detailModalFooter: {
+    marginTop: 14,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+    paddingTop: 12,
+  },
+  detailAdminActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 14,
     gap: 8,
+    width: '100%',
   },
-  detailShareBtn: {
-    padding: 8,
+  detailAdminBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  detailAdminBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailPinBtn: {
+    backgroundColor: Colors.skyBlueSurface,
+    borderColor: Colors.skyBlueHeader,
+  },
+  detailPinBtnActive: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
   },
   detailEditBtn: {
+    backgroundColor: Colors.skyBlueBackground,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  detailDeleteBtn: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+  },
+  detailMainActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 4,
+    gap: 10,
+    width: '100%',
   },
-  detailEditBtnText: {
+  detailShareWideBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+    backgroundColor: Colors.skyBlueBackground,
+  },
+  detailShareWideBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.skyBlueHeader,
   },
   detailCloseBtn: {
+    flex: 1,
     backgroundColor: Colors.yellowHighlight,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 12,
   },
   detailCloseBtnText: {
@@ -1064,5 +1599,260 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: Colors.onYellowContainer,
+  },
+  formPinBox: {
+    flexDirection: 'column',
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    gap: 8,
+  },
+  formPinTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    width: '100%',
+  },
+  formPinDurationBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginTop: 4,
+  },
+  formPinDurationTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  formPinDurationChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  durationChip: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  durationChipActive: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#D97706',
+  },
+  durationChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  durationChipTextActive: {
+    color: Colors.white,
+  },
+  formPinBoxActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#F59E0B',
+  },
+  formPinLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
+  },
+  formPinIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.skyBlueSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  formPinIconCircleActive: {
+    backgroundColor: '#FEF3C7',
+  },
+  formPinTextWrapper: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+  },
+  formPinTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  formPinTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textNavyDark,
+    flexShrink: 1,
+  },
+  formPinnedBadge: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    flexShrink: 0,
+  },
+  formPinnedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  formPinSub: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+    marginTop: 1,
+  },
+  formPinToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    flexShrink: 0,
+  },
+  formPinToggleInactive: {
+    backgroundColor: Colors.skyBlueSurface,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueHeader,
+  },
+  formPinToggleActive: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  formPinToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+  },
+  formDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  formDeleteBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  detailImageContainer: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 14,
+    backgroundColor: Colors.skyBlueSurface,
+  },
+  detailBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  formPhotoSection: {
+    marginBottom: 14,
+  },
+  formPhotoPickerBox: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.skyBlueHeader,
+    borderRadius: 14,
+    backgroundColor: '#F0F9FF',
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  formPhotoPickerIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  formPhotoPickerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
+  },
+  formPhotoPickerSub: {
+    fontSize: 11,
+    color: Colors.textNavyMuted,
+  },
+  formPhotoPreviewWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.skyBlueBorder,
+    backgroundColor: '#000',
+  },
+  formPhotoPreviewImage: {
+    width: '100%',
+    height: 160,
+  },
+  formPhotoActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: Colors.white,
+    gap: 8,
+  },
+  formPhotoChangeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.skyBlueHeader,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  formPhotoChangeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  formPhotoDeleteBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEE2F2',
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  formPhotoDeleteBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
   },
 });

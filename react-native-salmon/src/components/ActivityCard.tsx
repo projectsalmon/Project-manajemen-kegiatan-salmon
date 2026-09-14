@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Image,
+  NativeModules,
+  Platform,
   Share,
   StyleSheet,
   Text,
@@ -15,12 +17,12 @@ import {
   Fonts,
   RsvpStatusMeta,
 } from '../constants/theme';
-import { ActivityItem, RsvpStatusType } from '../types';
+import { ActivityItem, RsvpStatusType, isItemPinned } from '../types';
 
 interface ActivityCardProps {
   activity: ActivityItem;
   onCardClick: () => void;
-  onRsvpClick: (newStatus: RsvpStatusType) => void;
+  onRsvpClick: (status: RsvpStatusType) => void;
   onEditClick?: () => void;
 }
 
@@ -30,9 +32,16 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   onRsvpClick,
   onEditClick,
 }) => {
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [activity?.imageUrl]);
+
   const categoryInfo = (activity?.category && CategoryMeta[activity.category]) || CategoryMeta.KERJA_BAKTI;
   const approvalInfo = (activity?.approvalStatus && ApprovalStatusMeta[activity.approvalStatus]) || ApprovalStatusMeta.PUBLISHED;
   const rsvpInfo = (activity?.userRsvpStatus && RsvpStatusMeta[activity.userRsvpStatus]) || RsvpStatusMeta.NONE;
+  const isPinnedActive = isItemPinned(activity);
 
   const handleShare = async () => {
     try {
@@ -41,6 +50,18 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         `📍 Lokasi: ${activity.locationName}\n` +
         `📌 Sasaran: ${activity.targetRegion}\n\n` +
         `${activity.description}`;
+
+      if (
+        Platform.OS === 'android' &&
+        activity.imageUrl &&
+        NativeModules.WidgetUpdateModule?.shareToWhatsAppWithImage
+      ) {
+        await NativeModules.WidgetUpdateModule.shareToWhatsAppWithImage(
+          activity.imageUrl,
+          shareMessage
+        );
+        return;
+      }
 
       await Share.share({
         title: activity.title,
@@ -53,17 +74,18 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isPinnedActive && styles.cardPinned]}
       activeOpacity={0.9}
       onPress={onCardClick}
     >
       {/* 1. TOP-ALIGNED IMAGE BANNER */}
       <View style={styles.imageBannerContainer}>
-        {activity.imageUrl ? (
+        {activity.imageUrl && !imageError ? (
           <Image
             source={{ uri: activity.imageUrl }}
             style={styles.bannerImage}
             resizeMode="cover"
+            onError={() => setImageError(true)}
           />
         ) : (
           <View style={styles.fallbackBanner}>
@@ -76,11 +98,22 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           </View>
         )}
 
+        {/* Pinned Badge */}
+        {isPinnedActive && (
+          <View style={styles.pinnedBannerBadge}>
+            <MaterialCommunityIcons name="pin" size={13} color="#FFFFFF" />
+            <Text style={styles.pinnedBannerBadgeText}>
+              Disematkan ({activity.pinDurationLabel || 'Teratas'})
+            </Text>
+          </View>
+        )}
+
         {/* Status Approval Badge (if not PUBLISHED) */}
         {activity.approvalStatus !== 'PUBLISHED' && approvalInfo && (
           <View
             style={[
               styles.approvalBadge,
+              isPinnedActive && { top: 38 },
               { backgroundColor: approvalInfo.containerColor, borderColor: approvalInfo.badgeColor },
             ]}
           >
@@ -254,6 +287,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 3,
     overflow: 'hidden',
+  },
+  cardPinned: {
+    borderColor: '#F59E0B',
+    borderWidth: 2,
+  },
+  pinnedBannerBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#D97706',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  pinnedBannerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   imageBannerContainer: {
     height: 130,

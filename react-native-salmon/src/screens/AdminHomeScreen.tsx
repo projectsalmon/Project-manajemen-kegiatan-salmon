@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
-import { Colors } from '../constants/theme';
+import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
 interface AdminHomeScreenProps {
@@ -18,6 +18,8 @@ interface AdminHomeScreenProps {
 export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) => {
   const {
     currentUser,
+    allUsers = [],
+    isSuperAdmin,
     activities,
     updateRsvpStatus,
     rwApproveActivity,
@@ -126,6 +128,36 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
             Terbitkan Pengumuman Resmi
           </Text>
         </TouchableOpacity>
+
+        {/* Tombol Khusus Admin: Kelola Akun & Hak Akses Pengguna */}
+        {(role === 'STAF_KELURAHAN' || isSuperAdmin(currentUser.email)) && (
+          <TouchableOpacity
+            style={styles.userManagementButton}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('AdminUserManagementScreen')}
+          >
+            <View style={styles.userManagementIconBox}>
+              <MaterialCommunityIcons
+                name="account-cog"
+                size={22}
+                color={Colors.onYellowContainer}
+              />
+            </View>
+            <View style={styles.userManagementTextCol}>
+              <Text style={styles.userManagementTitle}>
+                Kelola Akun & Hak Akses Warga
+              </Text>
+              <Text style={styles.userManagementSubtitle}>
+                {allUsers?.length || 0} Akun Masuk • Atur Peran & Profil
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={22}
+              color={Colors.onYellowContainer}
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 3. MULTI-TIER APPROVAL PIPELINE FOR RW */}
@@ -371,6 +403,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.skyBlueHeader,
+  },
+  userManagementButton: {
+    backgroundColor: Colors.yellowContainer,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.yellowBorderLis,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+  },
+  userManagementIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FEF08A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userManagementTextCol: {
+    flex: 1,
+  },
+  userManagementTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
+    color: Colors.onYellowContainer,
+  },
+  userManagementSubtitle: {
+    fontSize: 11,
+    fontFamily: Fonts.bodyMedium,
+    color: '#854D0E',
+    marginTop: 2,
   },
   pipelineSection: {
     marginBottom: 18,

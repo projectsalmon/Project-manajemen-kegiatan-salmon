@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { VerificationModal } from '../components/VerificationModal';
-import { Colors, RsvpStatusMeta, UserRolesMeta } from '../constants/theme';
+import { Colors, Fonts, RsvpStatusMeta, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { ContactItem, RegionInvitationCode, UserRoleType } from '../types';
 
@@ -26,6 +26,7 @@ interface ProfileScreenProps {
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const {
     currentUser,
+    isSuperAdmin,
     activities,
     contacts,
     regionCodes,
@@ -38,6 +39,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     updateContact,
     deleteContact,
     showToast,
+    logout,
   } = useApp();
 
   // Edit Profile Modal State
@@ -101,30 +103,102 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     setIsEditProfileModalVisible(true);
   };
 
-  // Pick Photo for Avatar
-  const handlePickAvatar = async () => {
+  // Pick Photo for Avatar (Camera & Gallery with lightweight compression for Firestore)
+  const promptAvatarPicker = (isDirectUpdate = false) => {
+    Alert.alert(
+      'Ganti Foto Profil',
+      'Pilih sumber foto profil Anda:',
+      [
+        {
+          text: 'Ambil Foto (Kamera)',
+          onPress: () => performPickAvatar('camera', isDirectUpdate),
+        },
+        {
+          text: 'Pilih dari Galeri',
+          onPress: () => performPickAvatar('gallery', isDirectUpdate),
+        },
+        ...(currentUser.avatarUrl
+          ? [
+              {
+                text: 'Hapus Foto Profil',
+                style: 'destructive' as const,
+                onPress: () => {
+                  if (isDirectUpdate) {
+                    updateProfile({ avatarUrl: undefined });
+                  } else {
+                    setEditAvatarUrl('');
+                  }
+                },
+              },
+            ]
+          : []),
+        { text: 'Batal', style: 'cancel' as const },
+      ]
+    );
+  };
+
+  const performPickAvatar = async (
+    source: 'camera' | 'gallery',
+    isDirectUpdate: boolean
+  ) => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert(
-          'Izin Diperlukan',
-          'Aplikasi membutuhkan izin galeri untuk memilih foto profil.'
-        );
-        return;
+      if (source === 'camera') {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(
+            'Izin Kamera Diperlukan',
+            'Aplikasi membutuhkan izin kamera untuk mengambil foto profil.'
+          );
+          return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.25,
+          base64: true,
+        });
+        if (!result.canceled && result.assets.length > 0) {
+          const asset = result.assets[0];
+          const onlineUri = asset.base64
+            ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+            : asset.uri;
+          if (isDirectUpdate) {
+            await updateProfile({ avatarUrl: onlineUri });
+          } else {
+            setEditAvatarUrl(onlineUri);
+          }
+        }
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(
+            'Izin Galeri Diperlukan',
+            'Aplikasi membutuhkan izin galeri untuk memilih foto profil.'
+          );
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.25,
+          base64: true,
+        });
+        if (!result.canceled && result.assets.length > 0) {
+          const asset = result.assets[0];
+          const onlineUri = asset.base64
+            ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
+            : asset.uri;
+          if (isDirectUpdate) {
+            await updateProfile({ avatarUrl: onlineUri });
+          } else {
+            setEditAvatarUrl(onlineUri);
+          }
+        }
       }
-
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!pickerResult.canceled && pickerResult.assets.length > 0) {
-        setEditAvatarUrl(pickerResult.assets[0].uri);
-      }
-    } catch (error) {
-      showToast('Gagal memilih foto dari galeri');
+    } catch (err) {
+      console.warn('Pick avatar error:', err);
+      showToast('Gagal memproses foto profil.');
     }
   };
 
@@ -140,7 +214,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       nik: editNik.trim(),
       age: editAge.trim() ? editAge.trim() : undefined,
       address: editAddress.trim() ? editAddress.trim() : undefined,
-      role: editRole,
+      role: isSuperAdmin(currentUser.email) ? editRole : currentUser.role,
       kelurahan: editKelurahan.trim(),
       rw: editRw.trim(),
       rt: editRt.trim(),
@@ -251,10 +325,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'LoginScreen' }],
-    });
+    Alert.alert(
+      'Keluar dari Aplikasi?',
+      `Apakah Anda yakin ingin keluar dari akun Google (${currentUser.email || currentUser.name})?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Keluar',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'LoginScreen' }],
+            });
+          },
+        },
+      ]
+    );
   };
 
   const currentRoleMeta = UserRolesMeta[currentUser.role] || UserRolesMeta.WARGA;
@@ -267,7 +355,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     >
       {/* 1. PROFILE IDENTITY CARD */}
       <View style={styles.profileHeaderCard}>
-        <View style={styles.avatarCircle}>
+        <TouchableOpacity
+          style={styles.avatarCircle}
+          activeOpacity={0.85}
+          onPress={() => promptAvatarPicker(true)}
+        >
           {currentUser.avatarUrl ? (
             <Image
               source={{ uri: currentUser.avatarUrl }}
@@ -278,7 +370,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
             </Text>
           )}
-        </View>
+          <View style={styles.avatarCameraBadgeTop}>
+            <MaterialCommunityIcons
+              name="camera"
+              size={13}
+              color={Colors.white}
+            />
+          </View>
+        </TouchableOpacity>
 
         <Text style={styles.profileName}>{currentUser.name}</Text>
         <Text style={styles.profileNik}>NIK: {currentUser.nik || 'Belum diisi'}</Text>
@@ -304,10 +403,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           <MaterialCommunityIcons
             name="account-edit-outline"
             size={18}
-            color={Colors.skyBlueHeader}
+            color={Colors.onYellowContainer}
           />
-          <Text style={styles.editProfileBtnText}>Edit Profil & Peran</Text>
+          <Text style={styles.editProfileBtnText}>Edit Data Profil</Text>
         </TouchableOpacity>
+
+        {/* Tombol Khusus Super Admin: Kelola Akun & Role Pengguna */}
+        {isSuperAdmin(currentUser.email) && (
+          <TouchableOpacity
+            style={styles.adminUserManagementBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('AdminUserManagementScreen')}
+          >
+            <MaterialCommunityIcons
+              name="account-cog"
+              size={18}
+              color={Colors.skyBlueHeader}
+            />
+            <Text style={styles.adminUserManagementBtnText}>
+              Kelola Akun & Role Pengguna
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 2. WARGA VERIFICATION STATUS CARD (Khusus Role Warga) */}
@@ -390,11 +507,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 size={22}
                 color={Colors.skyBlueHeader}
               />
-              <View>
+              <View style={styles.headerTextGroup}>
                 <Text style={styles.cardHeaderTitle}>
                   Kode Wilayah RT / RW
                 </Text>
-                <Text style={styles.cardHeaderSubtitle}>
+                <Text
+                  style={styles.cardHeaderSubtitle}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   Bagikan ke warga agar otomatis terdaftar
                 </Text>
               </View>
@@ -402,11 +523,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
             <TouchableOpacity
               style={styles.addCodeHeaderBtn}
+              activeOpacity={0.8}
               onPress={handleOpenCreateCode}
             >
               <MaterialCommunityIcons
                 name="plus"
-                size={18}
+                size={16}
                 color={Colors.skyBlueHeader}
               />
               <Text style={styles.addCodeHeaderBtnText}>Buat Kode</Text>
@@ -899,7 +1021,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 <TouchableOpacity
                   style={styles.avatarEditCircle}
                   activeOpacity={0.8}
-                  onPress={handlePickAvatar}
+                  onPress={() => promptAvatarPicker(false)}
                 >
                   {editAvatarUrl ? (
                     <Image
@@ -919,7 +1041,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                     />
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handlePickAvatar}>
+                <TouchableOpacity onPress={() => promptAvatarPicker(false)}>
                   <Text style={styles.avatarChangeText}>Ubah Foto Profil</Text>
                 </TouchableOpacity>
               </View>
@@ -978,49 +1100,67 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
               {/* Form: Peran Pengguna / Jabatan */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Pilih Peran / Jabatan Akun *</Text>
-                <View style={styles.roleSelectionContainer}>
-                  {availableRoles.map((roleKey) => {
-                    const meta = UserRolesMeta[roleKey];
-                    const isSelected = editRole === roleKey;
+                <Text style={styles.formLabel}>Peran & Hak Akses Akun</Text>
+                {isSuperAdmin(currentUser.email) ? (
+                  <View style={styles.roleSelectionContainer}>
+                    {availableRoles.map((roleKey) => {
+                      const meta = UserRolesMeta[roleKey];
+                      const isSelected = editRole === roleKey;
 
-                    return (
-                      <TouchableOpacity
-                        key={roleKey}
-                        style={[
-                          styles.roleOptionCard,
-                          isSelected && {
-                            borderColor: meta.badgeColor,
-                            backgroundColor: `${meta.badgeColor}15`,
-                            borderWidth: 2,
-                          },
-                        ]}
-                        activeOpacity={0.85}
-                        onPress={() => setEditRole(roleKey)}
-                      >
-                        <View
+                      return (
+                        <TouchableOpacity
+                          key={roleKey}
                           style={[
-                            styles.roleOptionDot,
-                            { backgroundColor: meta.badgeColor },
+                            styles.roleOptionCard,
+                            isSelected && {
+                              borderColor: meta.badgeColor,
+                              backgroundColor: `${meta.badgeColor}15`,
+                              borderWidth: 2,
+                            },
                           ]}
-                        />
-                        <View style={styles.roleOptionInfo}>
-                          <Text style={styles.roleOptionTitle}>{meta.title}</Text>
-                          <Text style={styles.roleOptionSubtitle}>
-                            {meta.subtitle}
-                          </Text>
-                        </View>
-                        {isSelected && (
-                          <MaterialCommunityIcons
-                            name="check-circle"
-                            size={20}
-                            color={meta.badgeColor}
+                          activeOpacity={0.85}
+                          onPress={() => setEditRole(roleKey)}
+                        >
+                          <View
+                            style={[
+                              styles.roleOptionDot,
+                              { backgroundColor: meta.badgeColor },
+                            ]}
                           />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                          <View style={styles.roleOptionInfo}>
+                            <Text style={styles.roleOptionTitle}>{meta.title}</Text>
+                            <Text style={styles.roleOptionSubtitle}>
+                              {meta.subtitle}
+                            </Text>
+                          </View>
+                          {isSelected && (
+                            <MaterialCommunityIcons
+                              name="check-circle"
+                              size={20}
+                              color={meta.badgeColor}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.lockedRoleContainer}>
+                    <View style={styles.lockedRoleRow}>
+                      <MaterialCommunityIcons
+                        name="shield-lock"
+                        size={20}
+                        color={Colors.skyBlueHeader}
+                      />
+                      <Text style={styles.lockedRoleText}>
+                        {UserRolesMeta[currentUser.role]?.title || currentUser.role}
+                      </Text>
+                    </View>
+                    <Text style={styles.lockedRoleHint}>
+                      Peran dan wewenang akun Anda diatur langsung oleh Admin Kelurahan.
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Form: Wilayah RT & RW */}
@@ -1288,6 +1428,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.onYellowContainer,
   },
+  adminUserManagementBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 14,
+    gap: 8,
+    marginTop: 8,
+  },
+  adminUserManagementBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.skyBlueHeader,
+  },
   verificationCard: {
     backgroundColor: Colors.white,
     borderRadius: 18,
@@ -1376,6 +1533,35 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.skyBlueBorder,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  headerLeftWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    marginRight: 8,
+  },
+  headerTextGroup: {
+    flex: 1,
+  },
+  avatarCameraBadgeTop: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: Colors.skyBlueHeader,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
   cardHeaderSubtitle: {
     fontSize: 11,
     color: Colors.textNavyMuted,
@@ -1389,6 +1575,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     gap: 4,
+    flexShrink: 0,
   },
   addCodeHeaderBtnText: {
     fontSize: 12,
@@ -1547,17 +1734,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1.5,
     borderColor: Colors.yellowBorderLis,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  headerLeftWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   counterBadge: {
     backgroundColor: Colors.yellowContainer,
@@ -1818,6 +1994,31 @@ const styles = StyleSheet.create({
   roleSelectionContainer: {
     gap: 6,
     marginTop: 4,
+  },
+  lockedRoleContainer: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+  },
+  lockedRoleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  lockedRoleText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.skyBlueHeader,
+  },
+  lockedRoleHint: {
+    fontSize: 11,
+    color: '#0369A1',
+    fontFamily: Fonts.bodyRegular,
+    lineHeight: 16,
   },
   roleOptionCard: {
     flexDirection: 'row',

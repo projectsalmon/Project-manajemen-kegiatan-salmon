@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -34,9 +35,24 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const { loginWithGoogleProfile, showToast } = useApp();
+  const { currentUser, isLoggedIn, loginWithGoogleProfile, showToast } = useApp();
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const hasNavigatedRef = useRef(false);
+
+  const navigateToMainTabs = useCallback(() => {
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+    try {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    } catch {
+      navigation.navigate('MainTabs');
+    }
+  }, [navigation]);
 
   const completeGoogleLogin = async (email: string, name: string, photoUrl?: string) => {
     try {
@@ -49,23 +65,55 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           `https://ui-avatars.com/api/?name=${encodeURIComponent(name || email)}&background=0369A1&color=fff`,
       });
 
-      // Small delay to allow Google Play Services activity to finish cleanly
-      setTimeout(() => {
-        try {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'MainTabs' }],
-          });
-        } catch {
-          navigation.navigate('MainTabs');
-        }
-      }, 150);
+      navigateToMainTabs();
     } catch (err: any) {
       setAuthError(err?.message || 'Gagal menyelesaikan otentikasi profil.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Auto-login if session already active or via silent sign-in
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkExistingSession = async () => {
+      // 1. If AppContext already restored a valid logged-in user
+      if (isLoggedIn && currentUser && currentUser.email) {
+        navigateToMainTabs();
+        return;
+      }
+
+      // 2. Try silent sign in if Google account is still cached
+      try {
+        const hasPlay = await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: false });
+        if (hasPlay) {
+          const silentResult = await GoogleSignin.signInSilently();
+          const user = silentResult.data?.user || (silentResult as any).user;
+          if (user && user.email && isMounted) {
+            await completeGoogleLogin(
+              user.email,
+              user.name || user.email.split('@')[0],
+              user.photo || undefined
+            );
+            return;
+          }
+        }
+      } catch (err) {
+        // Silent sign-in not available or user logged out
+      } finally {
+        if (isMounted) {
+          setIsCheckingSession(false);
+        }
+      }
+    };
+
+    checkExistingSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn, currentUser?.email, navigateToMainTabs]);
 
   const handleGoogleButtonClick = async () => {
     setAuthError(null);
@@ -116,16 +164,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  if (isCheckingSession) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Image
+          source={require('../../assets/icon.png')}
+          style={styles.logoImage}
+          resizeMode="cover"
+        />
+        <Text style={[styles.appTitle, { marginTop: 14 }]}>Kegiatan Kelurahan</Text>
+        <ActivityIndicator size="large" color={Colors.skyBlueHeader} style={{ marginTop: 24 }} />
+        <Text style={[styles.appSubtitle, { marginTop: 12 }]}>Memeriksa status akun...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* App Logo */}
-        <View style={styles.logoCircle}>
-          <MaterialCommunityIcons name="city-variant" size={46} color={Colors.white} />
-        </View>
+        {/* App Official Logo */}
+        <Image
+          source={require('../../assets/icon.png')}
+          style={styles.logoImage}
+          resizeMode="cover"
+        />
 
         {/* Title & Subtitle */}
         <Text style={styles.appTitle}>Kegiatan Kelurahan</Text>
@@ -184,14 +249,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Colors.skyBlueHeader,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
+  logoImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 22,
+    marginBottom: 16,
     elevation: 4,
     shadowColor: Colors.skyBlueHeader,
     shadowOffset: { width: 0, height: 4 },
