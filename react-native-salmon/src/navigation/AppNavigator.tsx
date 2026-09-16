@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   NavigationContainer,
@@ -26,6 +26,8 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { PosyanduHomeScreen } from '../screens/PosyanduHomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { WargaHomeScreen } from '../screens/WargaHomeScreen';
+import { OnboardingScreen, ONBOARDING_STORAGE_KEY } from '../screens/OnboardingScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -63,12 +65,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: Colors.onYellowContainer,
-          tabBarInactiveTintColor: Colors.textNavyMuted,
+          tabBarActiveTintColor: Colors.salmonPrimary,
+          tabBarInactiveTintColor: Colors.iosTextMuted,
           tabBarStyle: {
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.iosCard,
             borderTopWidth: 1,
-            borderTopColor: Colors.borderLight,
+            borderTopColor: Colors.iosBorder,
             height: 56 + bottomInset,
             paddingBottom: bottomInset,
             paddingTop: 6,
@@ -90,7 +92,7 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
               <MaterialCommunityIcons
                 name={focused ? 'home' : 'home-outline'}
                 size={size}
-                color={focused ? Colors.yellowAccent : color}
+                color={focused ? Colors.salmonPrimary : color}
               />
             ),
           }}
@@ -105,7 +107,7 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
               <MaterialCommunityIcons
                 name={focused ? 'format-list-checks' : 'format-list-bulleted'}
                 size={size}
-                color={focused ? Colors.yellowAccent : color}
+                color={focused ? Colors.salmonPrimary : color}
               />
             ),
           }}
@@ -115,12 +117,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           name="PengumumanTab"
           component={AnnouncementListScreen}
           options={{
-            tabBarLabel: 'Pengumuman',
+            tabBarLabel: 'Warta',
             tabBarIcon: ({ color, size, focused }) => (
               <MaterialCommunityIcons
                 name={focused ? 'bullhorn' : 'bullhorn-outline'}
                 size={size}
-                color={focused ? Colors.yellowAccent : color}
+                color={focused ? Colors.salmonPrimary : color}
               />
             ),
           }}
@@ -135,7 +137,7 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
               <MaterialCommunityIcons
                 name={focused ? 'calendar-month' : 'calendar-month-outline'}
                 size={size}
-                color={focused ? Colors.yellowAccent : color}
+                color={focused ? Colors.salmonPrimary : color}
               />
             ),
           }}
@@ -150,7 +152,7 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
               <MaterialCommunityIcons
                 name={focused ? 'account' : 'account-outline'}
                 size={size}
-                color={focused ? Colors.yellowAccent : color}
+                color={focused ? Colors.salmonPrimary : color}
               />
             ),
           }}
@@ -162,10 +164,46 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
 
 export const navigationRef = createNavigationContainerRef<any>();
 
+export const parseDeepLinkUrl = (
+  url: string | null
+): { type: 'ACTIVITY' | 'ANNOUNCEMENT'; id: string } | null => {
+  if (!url) return null;
+  try {
+    // 1. Format query params: com.salmon.app://detail?type=...&id=...
+    if (url.includes('id=')) {
+      const typeMatch = url.match(/[?&]type=([^&]+)/i);
+      const idMatch = url.match(/[?&]id=([^&]+)/i);
+      if (idMatch) {
+        const rawType = typeMatch ? decodeURIComponent(typeMatch[1]).toUpperCase() : 'ACTIVITY';
+        const id = decodeURIComponent(idMatch[1]);
+        const type: 'ACTIVITY' | 'ANNOUNCEMENT' =
+          rawType === 'PENGUMUMAN' || rawType === 'ANNOUNCEMENT' ? 'ANNOUNCEMENT' : 'ACTIVITY';
+        return { type, id };
+      }
+    }
+    // 2. Format path: com.salmon.app://activity/:id or com.salmon.app://announcement/:id
+    if (url.includes('/activity/')) {
+      const id = url.split('/activity/')[1]?.split('?')[0]?.replace(/\/$/, '');
+      if (id) return { type: 'ACTIVITY', id };
+    }
+    if (url.includes('/announcement/')) {
+      const id = url.split('/announcement/')[1]?.split('?')[0]?.replace(/\/$/, '');
+      if (id) return { type: 'ANNOUNCEMENT', id };
+    }
+  } catch (e) {
+    console.warn('Error parsing deep link URL:', e);
+  }
+  return null;
+};
+
 export const handleNotificationNavigation = (data: any) => {
   if (!data) return;
-  const { type, id } = data;
+  const rawType = String(data.type || '').toUpperCase();
+  const id = data.id;
   if (!id) return;
+
+  const type: 'ACTIVITY' | 'ANNOUNCEMENT' =
+    rawType === 'PENGUMUMAN' || rawType === 'ANNOUNCEMENT' ? 'ANNOUNCEMENT' : 'ACTIVITY';
 
   const performNav = () => {
     if (!navigationRef.isReady()) {
@@ -182,7 +220,7 @@ export const handleNotificationNavigation = (data: any) => {
         });
       }
     } catch (e) {
-      console.log('Error deep linking from notification:', e);
+      console.warn('Error navigating to target from deep link/notification:', e);
     }
   };
 
@@ -190,30 +228,76 @@ export const handleNotificationNavigation = (data: any) => {
 };
 
 export const AppNavigator: React.FC = () => {
-  React.useEffect(() => {
+  useEffect(() => {
+    // 1. Handle notification tray response (when user taps tray notification)
     const cleanup = setNotificationResponseHandler((data) => {
       handleNotificationNavigation(data);
     });
 
+    // 2. Handle cold-start notification click
     const timer = setTimeout(() => {
       checkColdStartNotification();
     }, 1200);
 
+    // 3. Handle cold-start deep link from Home Screen Widget
+    Linking.getInitialURL()
+      .then((initialUrl) => {
+        if (initialUrl) {
+          const parsed = parseDeepLinkUrl(initialUrl);
+          if (parsed) {
+            handleNotificationNavigation(parsed);
+          }
+        }
+      })
+      .catch((err) => console.warn('Error reading initial deep link URL:', err));
+
+    // 4. Handle warm-start deep link from Home Screen Widget (app in background)
+    const urlSubscription = Linking.addEventListener('url', (event) => {
+      if (event && event.url) {
+        const parsed = parseDeepLinkUrl(event.url);
+        if (parsed) {
+          handleNotificationNavigation(parsed);
+        }
+      }
+    });
+
     return () => {
       cleanup();
       clearTimeout(timer);
+      urlSubscription.remove();
     };
   }, []);
+
+  const [initialRoute, setInitialRoute] = React.useState<string | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_STORAGE_KEY)
+      .then((val) => {
+        if (val === 'true') {
+          setInitialRoute('LoginScreen');
+        } else {
+          setInitialRoute('OnboardingScreen');
+        }
+      })
+      .catch(() => {
+        setInitialRoute('LoginScreen');
+      });
+  }, []);
+
+  if (!initialRoute) {
+    return <View style={{ flex: 1, backgroundColor: Colors.iosBackground }} />;
+  }
 
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
-        initialRouteName="LoginScreen"
+        initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
         }}
       >
+        <Stack.Screen name="OnboardingScreen" component={OnboardingScreen} />
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
         <Stack.Screen
           name="MainTabs"
@@ -241,6 +325,6 @@ export const AppNavigator: React.FC = () => {
 const styles = StyleSheet.create({
   mainTabContainer: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
   },
 });

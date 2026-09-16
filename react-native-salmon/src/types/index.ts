@@ -99,6 +99,8 @@ export interface ActivityItem {
   maybeCount: number;
   quota?: number | null;
   userRsvpStatus: RsvpStatusType;
+  rsvpUsers?: Record<string, RsvpStatusType>;
+  rsvpMap?: Record<string, RsvpStatusType>;
   photos: string[];
   videos?: string[];
   imageUrl?: string | null;
@@ -110,6 +112,23 @@ export interface ActivityItem {
   pinnedAt?: string | null;
   pinExpiresAt?: string | null;
   pinDurationLabel?: string | null;
+  readByUserIds?: string[];
+  readCount?: number;
+  mediaArchive?: MediaArchiveItem[];
+}
+
+export interface MediaArchiveItem {
+  id: string; // Google Drive fileId
+  type: 'PHOTO' | 'VIDEO';
+  title?: string;
+  fileName: string;
+  mimeType: string;
+  viewUrl: string; // Google Drive view link
+  thumbnailUrl: string; // Google CDN image/poster URL (https://lh3.googleusercontent.com/d/...)
+  streamUrl?: string; // Preview player URL (https://drive.google.com/file/d/.../preview)
+  folderName?: string;
+  uploadedBy?: string;
+  uploadedAt: string; // ISO date
 }
 
 export type AnnouncementUrgencyType = 'PENTING' | 'INFO' | 'IMBAUAN' | 'DARURAT';
@@ -137,6 +156,8 @@ export interface AnnouncementItem {
   pinnedAt?: string | null;
   pinExpiresAt?: string | null;
   pinDurationLabel?: string | null;
+  readByUserIds?: string[];
+  readCount?: number;
 }
 
 export interface ContactItem {

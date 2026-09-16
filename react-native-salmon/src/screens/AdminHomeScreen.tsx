@@ -53,13 +53,29 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. ADMIN HEADER BANNER */}
+      {/* 0. APPLE IOS LARGE TITLE HEADER */}
+      <View style={styles.largeTitleContainer}>
+        <Text style={styles.largeTitleDate}>
+          {new Date()
+            .toLocaleDateString('id-ID', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })
+            .toUpperCase()}
+        </Text>
+        <Text style={styles.largeTitleText}>
+          Dashboard {role === 'RW' ? 'Rukun Warga' : role === 'RT' ? 'Rukun Tetangga' : 'Kelurahan'}
+        </Text>
+      </View>
+
+      {/* 1. ADMIN HEADER BANNER (Apple Inset Card) */}
       <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View style={styles.heroGreeting}>
             <View style={styles.badgeLabel}>
               <Text style={styles.badgeLabelText}>
-                DASHBOARD KELOLA {role}
+                KELOLA {role}
               </Text>
             </View>
             <Text style={styles.heroUserName} numberOfLines={1}>
@@ -67,11 +83,13 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
             </Text>
           </View>
 
-          <MaterialCommunityIcons
-            name="shield-account"
-            size={36}
-            color={Colors.white}
-          />
+          <View style={styles.heroIconBox}>
+            <MaterialCommunityIcons
+              name="shield-account"
+              size={28}
+              color={Colors.salmonPrimary}
+            />
+          </View>
         </View>
 
         {/* 3 Stat Cards Grid */}
@@ -109,7 +127,7 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
           <MaterialCommunityIcons
             name="plus-circle"
             size={20}
-            color={Colors.onYellowContainer}
+            color={Colors.white}
           />
           <Text style={styles.primaryActionText}>Buat Kegiatan Baru</Text>
         </TouchableOpacity>
@@ -122,7 +140,7 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
           <MaterialCommunityIcons
             name="bullhorn"
             size={18}
-            color={Colors.skyBlueHeader}
+            color={Colors.salmonPrimary}
           />
           <Text style={styles.secondaryActionText}>
             Terbitkan Pengumuman Resmi
@@ -140,7 +158,7 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
               <MaterialCommunityIcons
                 name="account-cog"
                 size={22}
-                color={Colors.onYellowContainer}
+                color={Colors.salmonPrimary}
               />
             </View>
             <View style={styles.userManagementTextCol}>
@@ -303,22 +321,41 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
   },
   contentContainer: {
     padding: 16,
     paddingBottom: 110,
   },
-  heroCard: {
-    backgroundColor: Colors.skyBlueHeader,
-    borderRadius: 22,
-    padding: 20,
+  largeTitleContainer: {
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingTop: 4,
+  },
+  largeTitleDate: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.iosTextMuted,
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  largeTitleText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.iosTextPrimary,
+    letterSpacing: -0.5,
+  },
+  heroCard: {
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -330,25 +367,33 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  heroIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.salmonContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badgeLabel: {
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: Colors.salmonContainer,
     borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
+    borderColor: Colors.salmonBorder,
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
     marginBottom: 4,
   },
   badgeLabelText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.salmonPrimary,
   },
   heroUserName: {
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '800',
-    color: Colors.white,
+    color: Colors.iosTextPrimary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -356,44 +401,52 @@ const styles = StyleSheet.create({
   },
   statPill: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: Colors.iosBackground,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
     padding: 10,
   },
   statNumber: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.white,
+    color: Colors.salmonPrimary,
   },
   statLabel: {
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+    color: Colors.iosTextSecondary,
     marginTop: 2,
   },
   actionButtonsCol: {
-    gap: 8,
-    marginBottom: 18,
+    gap: 10,
+    marginBottom: 20,
   },
   primaryActionButton: {
-    backgroundColor: Colors.yellowHighlight,
-    height: 50,
+    backgroundColor: Colors.salmonPrimary,
+    height: 48,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: Colors.salmonPrimary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 2,
   },
   primaryActionText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.white,
   },
   secondaryActionButton: {
-    backgroundColor: Colors.white,
-    height: 48,
+    backgroundColor: Colors.iosCard,
+    height: 46,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.skyBlueHeader,
+    borderColor: Colors.iosBorder,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -402,29 +455,24 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.skyBlueHeader,
+    color: Colors.iosTextPrimary,
   },
   userManagementButton: {
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: Colors.iosCard,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.yellowBorderLis,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
     paddingHorizontal: 14,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
   },
   userManagementIconBox: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 10,
-    backgroundColor: '#FEF08A',
+    backgroundColor: Colors.salmonContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -432,38 +480,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userManagementTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
-    fontFamily: Fonts.headingBold,
-    color: Colors.onYellowContainer,
+    color: Colors.iosTextPrimary,
   },
   userManagementSubtitle: {
     fontSize: 11,
-    fontFamily: Fonts.bodyMedium,
-    color: '#854D0E',
+    color: Colors.iosTextMuted,
     marginTop: 2,
   },
   pipelineSection: {
     marginBottom: 18,
   },
   pipelineSectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
     marginBottom: 8,
   },
   pipelineCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
     padding: 14,
     marginVertical: 4,
-    borderWidth: 1.5,
-    borderColor: Colors.yellowBorderLis,
-    elevation: 2,
-    shadowColor: Colors.black,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.03,
     shadowRadius: 2,
+    elevation: 1,
   },
   pipelineCardHeader: {
     flexDirection: 'row',
@@ -472,7 +518,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   pipelineStatusBadge: {
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: Colors.salmonContainer,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -480,20 +526,20 @@ const styles = StyleSheet.create({
   pipelineStatusBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.salmonPrimary,
   },
   pipelineDateText: {
     fontSize: 11,
-    color: Colors.textNavyMuted,
+    color: Colors.iosTextMuted,
   },
   pipelineTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
   },
   pipelineAuthor: {
     fontSize: 12,
-    color: Colors.textNavySecondary,
+    color: Colors.iosTextSecondary,
     marginTop: 2,
     marginBottom: 10,
   },
@@ -505,7 +551,7 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     borderWidth: 1,
-    borderColor: Colors.urgentRed,
+    borderColor: '#EF4444',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -513,10 +559,10 @@ const styles = StyleSheet.create({
   rejectButtonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.urgentRed,
+    color: '#EF4444',
   },
   approveButton: {
-    backgroundColor: Colors.yellowHighlight,
+    backgroundColor: Colors.salmonPrimary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -527,22 +573,22 @@ const styles = StyleSheet.create({
   approveButtonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.white,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sectionHeading: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
   },
   seeAllText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.skyBlueHeader,
+    color: Colors.salmonPrimary,
   },
 });

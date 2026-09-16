@@ -34,7 +34,14 @@ service cloud.firestore {
 
     // Helper: Periksa apakah pengguna adalah pemilik data (Owner)
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && (
+        request.auth.uid == userId ||
+        ('email' in request.auth.token && request.auth.token.email != null && (
+          userId == request.auth.token.email ||
+          (resource != null && 'email' in resource.data && resource.data.email.lower() == request.auth.token.email.lower()) ||
+          (request.resource != null && 'email' in request.resource.data && request.resource.data.email.lower() == request.auth.token.email.lower())
+        ))
+      );
     }
 
     // Aturan untuk Pengaturan Aplikasi / Identitas Kelurahan (/settings/{docId})
@@ -47,13 +54,37 @@ service cloud.firestore {
 
     // Aturan untuk Koleksi Pengguna (/users/{userId})
     match /users/{userId} {
-      // Pengguna terautentikasi dapat membaca direktori akun warga, Admin dapat membaca semua
-      allow read: if isAuthenticated();
-      
-      // Pengguna dapat memperbarui profilnya sendiri, Admin memiliki hak penuh
-      allow write: if isAuthenticated() && (
-        isAdmin() || isOwner(userId)
+      // Pengguna hanya dapat membaca profilnya sendiri, kecuali Admin atau RW yang berwenang melihat data warga
+      allow read: if isAuthenticated() && (
+        isOwner(userId) ||
+        isAdmin() ||
+        isRW()
       );
+
+      // Pengguna baru dapat mendaftarkan akun miliknya sendiri, dengan syarat peran default (bukan admin/staf)
+      allow create: if isAuthenticated() && (
+        isAdmin() || (
+          isOwner(userId) &&
+          (!('role' in request.resource.data) || request.resource.data.role == 'WARGA') &&
+          (!('userRole' in request.resource.data) || request.resource.data.userRole == 'WARGA')
+        )
+      );
+
+      // Pembaruan profil:
+      // - Admin memiliki hak penuh (misal verifikasi warga atau promosi jabatan)
+      // - Pengguna biasa hanya boleh mengupdate profil miliknya sendiri TANPA mengubah nilai role, userRole, atau status verifikasi
+      allow update: if isAuthenticated() && (
+        isAdmin() || (
+          isOwner(userId) &&
+          // Mencegah pergantian role oleh pengguna biasa
+          (!('role' in request.resource.data) || (resource != null && request.resource.data.role == resource.data.role)) &&
+          (!('userRole' in request.resource.data) || (resource != null && request.resource.data.userRole == resource.data.userRole)) &&
+          (!('isVerifiedWarga' in request.resource.data) || (resource != null && request.resource.data.isVerifiedWarga == resource.data.isVerifiedWarga))
+        )
+      );
+
+      // Hanya Admin yang dapat menghapus akun pengguna
+      allow delete: if isAdmin();
     }
 
     // Aturan untuk Koleksi Kegiatan (/activities/{activityId})
@@ -61,15 +92,20 @@ service cloud.firestore {
       // Semua pengguna (publik & terautentikasi) dapat membaca kegiatan
       allow read: if true;
 
-      // Pengguna terautentikasi dapat membuat kegiatan atau melakukan seeding awal
+      // Pengguna terautentikasi dapat membuat usulan kegiatan
       allow create: if isAuthenticated();
 
-      // Pengguna terautentikasi dapat memperbarui kegiatan:
-      // - Admin/Staf Kelurahan: persetujuan akhir & kelola seluruh kegiatan
-      // - Pengurus RW: approval usulan RT
-      // - Pemilik Kegiatan: edit detail kegiatan miliknya
-      // - Warga: konfirmasi kehadiran / partisipasi (RSVP)
-      allow update: if isAuthenticated();
+      // Pembaruan kegiatan:
+      // - Admin / Pengurus RW memiliki hak kelola penuh (approval, pin, perubahan jadwal)
+      // - Pembuat kegiatan dapat mengubah data kegiatannya sendiri
+      // - Warga biasa hanya boleh memperbarui RSVP/kehadiran dan riwayat baca
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        isRW() ||
+        (resource.data.userId == request.auth.uid) ||
+        ('email' in request.auth.token && resource.data.creatorEmail == request.auth.token.email) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmedCount', 'maybeCount', 'userRsvpStatus', 'rsvpUsers', 'rsvpMap', 'readByUserIds', 'readCount']))
+      );
 
       // Hanya Admin atau pemilik kegiatan yang dapat menghapus kegiatan
       allow delete: if isAuthenticated() && (
@@ -82,7 +118,13 @@ service cloud.firestore {
     // Aturan untuk Koleksi Pengumuman (/announcements/{announcementId})
     match /announcements/{announcementId} {
       allow read: if true;
-      allow write: if isAuthenticated() && (isAdmin() || isRW());
+      allow create, delete: if isAuthenticated() && (isAdmin() || isRW());
+      // Admin/RW dapat mengubah konten, sedangkan warga hanya boleh memperbarui view count / RSVP pengumuman
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        isRW() ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readCount', 'readByUserIds', 'userRsvpStatus', 'confirmedCount']))
+      );
     }
 
     // Aturan untuk Kontak Penting (/contacts/{contactId})

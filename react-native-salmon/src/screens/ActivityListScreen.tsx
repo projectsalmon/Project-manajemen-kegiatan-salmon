@@ -13,7 +13,7 @@ import { ActivityCard } from '../components/ActivityCard';
 import { VerificationModal } from '../components/VerificationModal';
 import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
-import { ActivityCategoryType, ActivityItem, RsvpStatusType } from '../types';
+import { ActivityCategoryType, RsvpStatusType } from '../types';
 
 interface ActivityListScreenProps {
   navigation: any;
@@ -92,13 +92,18 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
 
   return (
     <View style={styles.container}>
+      {/* 0. APPLE IOS LARGE TITLE HEADER */}
+      <View style={styles.largeTitleContainer}>
+        <Text style={styles.largeTitleText}>Daftar Kegiatan</Text>
+      </View>
+
       {/* 1. SEARCH BAR */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <MaterialCommunityIcons
             name="magnify"
             size={20}
-            color={Colors.skyBlueHeader}
+            color={Colors.salmonPrimary}
           />
           <TextInput
             style={styles.searchInput}
@@ -267,7 +272,7 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
         />
       )}
 
-      {/* 5. FLOATING ACTION BUTTON (ADMIN ONLY) */}
+      {/* 5. FLOATING ACTION BUTTON (ADMIN ONLY) - Apple iOS Circular (+) */}
       {isAdmin && (
         <TouchableOpacity
           style={styles.fabButton}
@@ -276,10 +281,9 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
         >
           <MaterialCommunityIcons
             name="plus"
-            size={22}
-            color={Colors.onYellowContainer}
+            size={28}
+            color={Colors.white}
           />
-          <Text style={styles.fabText}>Buat Kegiatan</Text>
         </TouchableOpacity>
       )}
 
@@ -296,28 +300,39 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
+  },
+  largeTitleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  largeTitleText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.iosTextPrimary,
+    letterSpacing: -0.5,
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 6,
     paddingBottom: 4,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 44,
     borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
+    borderColor: Colors.iosBorder,
     gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
-    color: Colors.textNavyDark,
+    fontSize: 14,
+    color: Colors.iosTextPrimary,
     includeFontPadding: false,
   },
   filterScrollView: {
@@ -426,7 +441,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   resetButton: {
-    backgroundColor: Colors.yellowHighlight,
+    backgroundColor: Colors.salmonContainer,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -434,28 +449,22 @@ const styles = StyleSheet.create({
   resetButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.salmonPrimary,
   },
   fabButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 24,
     right: 20,
-    backgroundColor: Colors.yellowHighlight,
-    borderRadius: 30,
-    flexDirection: 'row',
+    width: 56,
+    height: 56,
+    backgroundColor: Colors.salmonPrimary,
+    borderRadius: 28,
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    gap: 6,
-    elevation: 4,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fabText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.onYellowContainer,
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: Colors.salmonPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
 });

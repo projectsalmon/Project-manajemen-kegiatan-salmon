@@ -139,7 +139,7 @@ export const sampleActivities: ActivityItem[] = [
     confirmedCount: 42,
     maybeCount: 5,
     quota: 60,
-    userRsvpStatus: 'ATTENDING',
+    userRsvpStatus: 'NONE',
     photos: [
       'https://images.pexels.com/photos/8460159/pexels-photo-8460159.jpeg?auto=compress&cs=tinysrgb&w=800',
       'https://images.pexels.com/photos/6646918/pexels-photo-6646918.jpeg?auto=compress&cs=tinysrgb&w=800',
@@ -205,7 +205,7 @@ export const sampleActivities: ActivityItem[] = [
     confirmedCount: 65,
     maybeCount: 12,
     quota: 100,
-    userRsvpStatus: 'ATTENDING',
+    userRsvpStatus: 'NONE',
     photos: [
       'https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800',
     ],
@@ -235,7 +235,7 @@ export const sampleActivities: ActivityItem[] = [
     confirmedCount: 38,
     maybeCount: 4,
     quota: 80,
-    userRsvpStatus: 'MAYBE',
+    userRsvpStatus: 'NONE',
     photos: [
       'https://images.pexels.com/photos/7088530/pexels-photo-7088530.jpeg?auto=compress&cs=tinysrgb&w=800',
     ],

@@ -6,6 +6,9 @@
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
@@ -17,6 +20,18 @@
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
+
+    <!-- FCM Default Notification Configuration for Terminated/Background State -->
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="kegiatan-kelurahan-notif" />
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_icon"
+        android:resource="@mipmap/ic_launcher" />
+    <meta-data
+        android:name="com.google.firebase.messaging.default_notification_color"
+        android:value="#0369A1" />
+
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
@@ -29,6 +44,30 @@
         <data android:scheme="com.salmon.app"/>
       </intent-filter>
     </activity>
+
+    <!-- Background Firebase Cloud Messaging Service for Push Notifications when app is terminated/killed -->
+    <service
+        android:name="expo.modules.notifications.service.ExpoFirebaseMessagingService"
+        android:exported="false">
+      <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+      </intent-filter>
+    </service>
+
+    <!-- Expo Notifications Receiver for background/boot events -->
+    <receiver
+        android:name="expo.modules.notifications.service.NotificationsService"
+        android:enabled="true"
+        android:exported="false">
+      <intent-filter>
+        <action android:name="expo.modules.notifications.NOTIFICATION_EVENT" />
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.REBOOT" />
+        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+        <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+      </intent-filter>
+    </receiver>
 
     <!-- Widget Beranda Handphone (AppWidget) -->
     <receiver

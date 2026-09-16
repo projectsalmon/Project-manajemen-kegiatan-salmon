@@ -2,6 +2,7 @@ package com.salmon.app.widget
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.salmon.app.R
@@ -65,9 +66,13 @@ class KegiatanWidgetItemFactory(private val context: Context) : RemoteViewsServi
             views.setTextViewText(R.id.item_badge, if (isPinned) "📌 KEGIATAN" else "📅 KEGIATAN")
         }
 
-        // Fill-in intent for item click
+        // Fill-in intent for item click with deep link URI
+        val itemType = if (type.equals("PENGUMUMAN", ignoreCase = true)) "ANNOUNCEMENT" else "ACTIVITY"
+        val deepLinkUri = Uri.parse("com.salmon.app://detail?type=$itemType&id=$id")
         val fillInIntent = Intent().apply {
-            putExtra("type", type)
+            action = Intent.ACTION_VIEW
+            data = deepLinkUri
+            putExtra("type", itemType)
             putExtra("id", id)
         }
         views.setOnClickFillInIntent(R.id.widget_item_container, fillInIntent)

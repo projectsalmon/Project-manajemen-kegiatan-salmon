@@ -151,9 +151,32 @@ export const triggerNotification = async (
         color: '#0369A1',
         badge: 1,
       },
-      trigger: null, // immediate
+      trigger: Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null,
     });
   } catch (err) {
     console.warn('Error triggering notification:', err);
   }
 };
+
+/**
+ * Register device for push notifications and obtain device FCM token
+ */
+export const registerForPushNotificationsAsync = async (): Promise<string | null> => {
+  try {
+    const granted = await initializeNotifications();
+    if (!granted) return null;
+
+    const tokenResult = await Notifications.getDevicePushTokenAsync();
+    if (tokenResult && tokenResult.data) {
+      return tokenResult.data;
+    }
+    return null;
+  } catch (err) {
+    // Non-blocking fallback if Google Play Services or token generation fails
+    console.warn('Error fetching device push token:', err);
+    return null;
+  }
+};
+
+// Pastikan notification channel terdaftar sesegera mungkin saat module diimpor di entry point
+initializeNotifications().catch(() => {});

@@ -9,47 +9,77 @@ import {
 } from '../types';
 
 export const Colors = {
-  // Light Blue Dominant Palette
-  skyBlueBackground: '#EBF5FF',
-  skyBlueSurface: '#FFFFFF',
-  skyBlueSurfaceVariant: '#DCEEFE',
-  skyBlueHeader: '#0369A1',
-  skyBlueBorder: '#BAE6FD',
+  // Apple Clean iOS Palette
+  iosBackground: '#F2F2F7',
+  iosCard: '#FFFFFF',
+  iosCardSecondary: '#F9F9FB',
+  iosBorder: '#E5E5EA',
+  iosSeparator: 'rgba(60, 60, 67, 0.12)',
 
-  // Yellow Accent & Border Lis
-  yellowAccent: '#CA8A04',
-  yellowHighlight: '#EAB308',
-  yellowBorderLis: '#EAB308',
-  yellowContainer: '#FEF08A',
-  onYellowContainer: '#713F12',
+  // Warm Salmon & Coral Accent
+  salmonPrimary: '#FF6B6B',
+  salmonWarm: '#FA8072',
+  salmonDark: '#E05656',
+  salmonContainer: '#FFEAE8',
+  salmonBorder: '#E5E5EA',
+  onSalmonContainer: '#8B1E1E',
+
+  // Apple System Text & Labels (High Contrast, Senior-friendly)
+  iosTextPrimary: '#1C1C1E',
+  iosTextSecondary: '#3A3A3C',
+  iosTextMuted: '#8E8E93',
+
+  // Apple Semantic Colors
+  iosSuccess: '#34C759',
+  iosSuccessBg: '#E8F9ED',
+  iosWarning: '#FF9500',
+  iosWarningBg: '#FFF5E5',
+  iosDanger: '#FF3B30',
+  iosDangerBg: '#FEECEB',
+  iosBlue: '#007AFF',
+  iosBlueBg: '#EAF3FF',
+
+  // Backwards-Compatible Mappings (Updated to Apple Clean Theme)
+  skyBlueBackground: '#F2F2F7',
+  skyBlueSurface: '#FFFFFF',
+  skyBlueSurfaceVariant: '#F2F2F7',
+  skyBlueHeader: '#FF6B6B',
+  skyBlueBorder: '#E5E5EA',
+
+  // Accent & Containers
+  yellowAccent: '#FF6B6B',
+  yellowHighlight: '#FA8072',
+  yellowBorderLis: '#E5E5EA',
+  yellowContainer: '#FFEAE8',
+  onYellowContainer: '#8B1E1E',
 
   // Text & Content Contrast
-  textNavyDark: '#0F172A',
-  textNavySecondary: '#334155',
-  textNavyMuted: '#64748B',
+  textNavyDark: '#1C1C1E',
+  textNavySecondary: '#3A3A3C',
+  textNavyMuted: '#8E8E93',
 
-  // Category Badge & Container Colors
-  posyanduPink: '#DB2777',
-  posyanduPinkContainer: '#FCE7F3',
+  // Category Badge & Container Colors (Soft Pastel iOS Style)
+  posyanduPink: '#E11D48',
+  posyanduPinkContainer: '#FFE4E6',
 
   kerjaBaktiOrange: '#EA580C',
   kerjaBaktiOrangeContainer: '#FFEDD5',
 
-  rapatBlue: '#0284C7',
-  rapatBlueContainer: '#E0F2FE',
+  rapatBlue: '#007AFF',
+  rapatBlueContainer: '#EAF3FF',
 
   kesehatanGreen: '#16A34A',
   kesehatanGreenContainer: '#DCFCE7',
 
-  urgentRed: '#DC2626',
-  urgentRedContainer: '#FEE2E2',
+  urgentRed: '#FF3B30',
+  urgentRedContainer: '#FEECEB',
 
   // System
   white: '#FFFFFF',
   black: '#000000',
-  borderLight: '#E2E8F0',
+  borderLight: '#E5E5EA',
   whatsappGreen: '#25D366',
-  whatsappGreenBg: '#DCF8C6',
+  whatsappGreenBg: '#E6F9EE',
 };
 
 export const UserRolesMeta: Record<UserRoleType, UserRoleInfo> = {
@@ -232,3 +262,42 @@ export const Fonts = {
   bodyExtraBold: 'OpenSans_800ExtraBold',
   bodyItalic: 'OpenSans_400Regular_Italic',
 };
+
+export const AppleElevation = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  floating: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+};
+
+export const formatUserRole = (role?: string): string => {
+  if (!role) return 'Warga';
+  if (UserRolesMeta[role as UserRoleType]) {
+    return UserRolesMeta[role as UserRoleType].title;
+  }
+  switch (role.toUpperCase()) {
+    case 'STAF_KELURAHAN':
+    case 'KELURAHAN':
+      return 'Staf Kelurahan';
+    case 'RT':
+      return 'Pengurus RT';
+    case 'RW':
+      return 'Pengurus RW';
+    case 'POSYANDU':
+      return 'Kader Posyandu';
+    case 'WARGA':
+    default:
+      return 'Warga';
+  }
+};
+

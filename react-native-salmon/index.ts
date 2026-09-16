@@ -16,6 +16,8 @@ if (typeof (global as any).ErrorUtils !== 'undefined') {
   });
 }
 
+// Inisialisasi awal notifikasi sistem & background handler sebelum mounting komponen
+import './src/services/notificationService';
 import App from './App';
 
 registerRootComponent(App);

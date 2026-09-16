@@ -28,7 +28,7 @@ class WidgetUpdateModule(reactContext: ReactApplicationContext) :
             val prefs = reactApplicationContext.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
             prefs.edit()
                 .putString("widget_items_json", itemsJson)
-                .apply()
+                .commit()
 
             KegiatanWidgetProvider.updateAllWidgets(reactApplicationContext)
         } catch (e: Exception) {
@@ -44,7 +44,7 @@ class WidgetUpdateModule(reactContext: ReactApplicationContext) :
                 .putString("widget_title", title)
                 .putString("widget_date", date)
                 .putString("widget_type", type)
-                .apply()
+                .commit()
 
             KegiatanWidgetProvider.updateAllWidgets(reactApplicationContext)
         } catch (e: Exception) {

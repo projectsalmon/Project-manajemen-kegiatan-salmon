@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +16,7 @@ import { openWhatsApp } from '../utils/whatsappHelpers';
 interface WhatsAppApprovalModalProps {
   visible: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   itemType: 'KEGIATAN' | 'PENGUMUMAN';
   targetName: string;
   targetRole: string;
@@ -29,7 +28,7 @@ interface WhatsAppApprovalModalProps {
 export const WhatsAppApprovalModal: React.FC<WhatsAppApprovalModalProps> = ({
   visible,
   onClose,
-  title,
+  title: _title,
   itemType,
   targetName,
   targetRole,

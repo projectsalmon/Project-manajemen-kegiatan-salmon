@@ -353,7 +353,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. PROFILE IDENTITY CARD */}
+      {/* 1. PROFILE IDENTITY CARD (Pure White Apple iOS Card) */}
       <View style={styles.profileHeaderCard}>
         <TouchableOpacity
           style={styles.avatarCircle}
@@ -382,49 +382,61 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <Text style={styles.profileName}>{currentUser.name}</Text>
         <Text style={styles.profileNik}>NIK: {currentUser.nik || 'Belum diisi'}</Text>
 
-        <View style={styles.roleBadgePill}>
+        <View
+          style={[
+            styles.roleBadgePill,
+            { backgroundColor: `${currentRoleMeta.badgeColor}15` },
+          ]}
+        >
           <View
             style={[
               styles.rolePillDot,
               { backgroundColor: currentRoleMeta.badgeColor },
             ]}
           />
-          <Text style={styles.roleBadgePillText}>
-            Peran: {currentRoleMeta.title}
+          <Text
+            style={[
+              styles.roleBadgePillText,
+              { color: currentRoleMeta.badgeColor },
+            ]}
+          >
+            {currentRoleMeta.title}
           </Text>
         </View>
 
-        {/* Tombol Edit Profil */}
-        <TouchableOpacity
-          style={styles.editProfileBtn}
-          activeOpacity={0.85}
-          onPress={handleOpenEditProfile}
-        >
-          <MaterialCommunityIcons
-            name="account-edit-outline"
-            size={18}
-            color={Colors.onYellowContainer}
-          />
-          <Text style={styles.editProfileBtnText}>Edit Data Profil</Text>
-        </TouchableOpacity>
-
-        {/* Tombol Khusus Super Admin: Kelola Akun & Role Pengguna */}
-        {isSuperAdmin(currentUser.email) && (
+        {/* Action Buttons Row */}
+        <View style={styles.headerActionsRow}>
           <TouchableOpacity
-            style={styles.adminUserManagementBtn}
+            style={styles.editProfileBtn}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('AdminUserManagementScreen')}
+            onPress={handleOpenEditProfile}
           >
             <MaterialCommunityIcons
-              name="account-cog"
-              size={18}
-              color={Colors.skyBlueHeader}
+              name="account-edit-outline"
+              size={16}
+              color={Colors.iosTextPrimary}
             />
-            <Text style={styles.adminUserManagementBtnText}>
-              Kelola Akun & Role Pengguna
-            </Text>
+            <Text style={styles.editProfileBtnText}>Edit Profil</Text>
           </TouchableOpacity>
-        )}
+
+          {/* Tombol Khusus Super Admin: Kelola Akun & Role Pengguna */}
+          {isSuperAdmin(currentUser.email) && (
+            <TouchableOpacity
+              style={styles.adminUserManagementBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('AdminUserManagementScreen')}
+            >
+              <MaterialCommunityIcons
+                name="account-cog"
+                size={16}
+                color={Colors.salmonPrimary}
+              />
+              <Text style={styles.adminUserManagementBtnText}>
+                Kelola Akun
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* 2. WARGA VERIFICATION STATUS CARD (Khusus Role Warga) */}
@@ -638,74 +650,84 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </View>
       )}
 
-      {/* 4. RESIDENT & PERSONAL DATA INFO CARD */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoCardHeaderRow}>
-          <Text style={styles.cardHeaderTitle}>Informasi Domisili & Profil</Text>
-          <TouchableOpacity
-            style={styles.headerEditLink}
-            onPress={handleOpenEditProfile}
-          >
-            <MaterialCommunityIcons
-              name="pencil-outline"
-              size={16}
-              color={Colors.skyBlueHeader}
-            />
-            <Text style={styles.headerEditLinkText}>Ubah</Text>
-          </TouchableOpacity>
-        </View>
+      {/* 4. RESIDENT & PERSONAL DATA (iOS Inset Grouped List) */}
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionGroupTitle}>DATA DIRI & DOMISILI</Text>
+        <TouchableOpacity
+          style={styles.headerEditLink}
+          onPress={handleOpenEditProfile}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.headerEditLinkText}>Ubah</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Nama Lengkap</Text>
-          <Text style={styles.infoValue}>{currentUser.name}</Text>
+      <View style={styles.insetGroupedCard}>
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>Nama Lengkap</Text>
+          <Text style={styles.groupedValue}>{currentUser.name}</Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>NIK</Text>
-          <Text style={styles.infoValue}>{currentUser.nik || '-'}</Text>
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>NIK</Text>
+          <Text style={styles.groupedValue}>{currentUser.nik || '-'}</Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Usia / Umur</Text>
-          <Text style={styles.infoValue}>
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>Usia</Text>
+          <Text style={styles.groupedValue}>
             {currentUser.age ? `${currentUser.age} Tahun` : 'Belum diisi'}
           </Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Alamat Domisili</Text>
-          <Text style={[styles.infoValue, { flex: 1, textAlign: 'right' }]}>
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>Alamat Domisili</Text>
+          <Text style={[styles.groupedValue, { flex: 1, textAlign: 'right' }]}>
             {currentUser.address || 'Belum diisi'}
           </Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Peran Akun</Text>
-          <Text style={[styles.infoValue, { color: currentRoleMeta.badgeColor }]}>
-            {currentRoleMeta.title} ({currentUser.role})
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>Peran Akun</Text>
+          <Text style={[styles.groupedValue, { color: currentRoleMeta.badgeColor, fontWeight: '700' }]}>
+            {currentRoleMeta.title}
           </Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Kelurahan</Text>
-          <Text style={styles.infoValue}>{currentUser.kelurahan}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>RW / RT</Text>
-          <Text style={styles.infoValue}>
-            RW {currentUser.rw} / RT {currentUser.rt}
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>Kelurahan</Text>
+          <Text style={styles.groupedValue}>
+            {currentUser.isVerifiedWarga && currentUser.kelurahan
+              ? currentUser.kelurahan
+              : 'Belum Terdaftar'}
           </Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>No. HP / WA</Text>
-          <Text style={styles.infoValue}>{currentUser.phone}</Text>
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>RW / RT</Text>
+          <Text style={styles.groupedValue}>
+            {currentUser.isVerifiedWarga && (currentUser.rw || currentUser.rt)
+              ? `RW ${currentUser.rw || '-'} / RT ${currentUser.rt || '-'}`
+              : 'Belum Diisi (Verifikasi Kode)'}
+          </Text>
         </View>
+        <View style={styles.groupedDivider} />
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Email</Text>
-          <Text style={styles.infoValue}>{currentUser.email || '-'}</Text>
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>No. HP / WhatsApp</Text>
+          <Text style={styles.groupedValue}>{currentUser.phone}</Text>
+        </View>
+        <View style={styles.groupedDivider} />
+
+        <View style={styles.groupedRow}>
+          <Text style={styles.groupedLabel}>Email</Text>
+          <Text style={styles.groupedValue}>{currentUser.email || '-'}</Text>
         </View>
       </View>
 
@@ -1342,7 +1364,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
   },
   contentContainer: {
     padding: 16,
@@ -1350,114 +1372,129 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   profileHeaderCard: {
-    backgroundColor: Colors.skyBlueHeader,
-    borderRadius: 22,
-    padding: 20,
+    backgroundColor: Colors.iosCard,
+    borderRadius: 20,
+    padding: 22,
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: Colors.black,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   avatarCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: Colors.white,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.iosBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
-    elevation: 2,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
     overflow: 'hidden',
   },
   avatarImage: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarLetter: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '800',
-    color: Colors.skyBlueHeader,
+    color: Colors.salmonPrimary,
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: Colors.white,
+    color: Colors.iosTextPrimary,
+    letterSpacing: -0.3,
   },
   profileNik: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 13,
+    color: Colors.iosTextMuted,
     marginTop: 2,
     marginBottom: 10,
   },
   roleBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 12,
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   rolePillDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   roleBadgePillText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+  },
+  headerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 2,
+    width: '100%',
+    justifyContent: 'center',
   },
   editProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: Colors.iosBackground,
     borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 14,
+    borderColor: Colors.iosBorder,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 12,
     gap: 6,
   },
   editProfileBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.iosTextPrimary,
   },
   adminUserManagementBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: Colors.salmonContainer,
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: Colors.salmonBorder,
     paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 14,
-    gap: 8,
-    marginTop: 8,
+    borderRadius: 12,
+    gap: 6,
   },
   adminUserManagementBtnText: {
     fontSize: 13,
-    fontWeight: '800',
-    color: Colors.skyBlueHeader,
+    fontWeight: '700',
+    color: Colors.salmonPrimary,
   },
   verificationCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
     padding: 16,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   verificationCardVerified: {
-    borderColor: Colors.kesehatanGreen,
-    backgroundColor: '#F0FDF4',
+    borderColor: Colors.iosBorder,
+    backgroundColor: '#F6FCF8',
   },
   verificationCardUnverified: {
-    borderColor: Colors.yellowBorderLis,
-    backgroundColor: '#FEFCE8',
+    borderColor: Colors.iosBorder,
+    backgroundColor: Colors.iosCard,
   },
   verificationHeader: {
     flexDirection: 'row',
@@ -1473,19 +1510,17 @@ const styles = StyleSheet.create({
   verificationTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
   },
   verificationSubtitle: {
     fontSize: 12,
-    color: Colors.textNavySecondary,
+    color: Colors.iosTextSecondary,
     marginTop: 3,
     lineHeight: 16,
   },
   verifyNowButton: {
     marginTop: 12,
-    backgroundColor: Colors.yellowContainer,
-    borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
+    backgroundColor: Colors.salmonPrimary,
     borderRadius: 12,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -1496,7 +1531,7 @@ const styles = StyleSheet.create({
   verifyNowButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.white,
   },
   verifiedActionsRow: {
     flexDirection: 'row',
@@ -1679,76 +1714,98 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
-  infoCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-  },
-  infoCardHeaderRow: {
+  sectionHeaderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    paddingHorizontal: 4,
+    marginTop: 6,
+    marginBottom: -4,
   },
   cardHeaderTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
+  },
+  sectionGroupTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: Colors.iosTextMuted,
   },
   headerEditLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   headerEditLinkText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: Colors.skyBlueHeader,
+    color: Colors.salmonPrimary,
   },
-  infoRow: {
+  insetGroupedCard: {
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+    overflow: 'hidden',
+  },
+  groupedRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
-  infoLabel: {
-    fontSize: 12,
-    color: Colors.textNavyMuted,
-    width: 110,
+  groupedLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.iosTextPrimary,
+    flexShrink: 0,
+    marginRight: 10,
   },
-  infoValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
+  groupedValue: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.iosTextSecondary,
     textAlign: 'right',
+    flexShrink: 1,
+  },
+  groupedDivider: {
+    height: 0.5,
+    backgroundColor: Colors.iosBorder,
+    marginLeft: 16,
   },
   rsvpCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
     padding: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.yellowBorderLis,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   counterBadge: {
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: Colors.salmonContainer,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   counterBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.salmonPrimary,
   },
   emptyRsvpText: {
     fontSize: 12,
-    color: Colors.textNavyMuted,
+    color: Colors.iosTextMuted,
     textAlign: 'center',
     paddingVertical: 12,
   },
@@ -1756,12 +1813,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
     borderRadius: 12,
-    padding: 10,
+    padding: 12,
     marginVertical: 4,
     borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
+    borderColor: Colors.iosBorder,
   },
   rsvpHistoryInfo: {
     flex: 1,
@@ -1770,7 +1827,7 @@ const styles = StyleSheet.create({
   rsvpHistoryTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
   },
   rsvpHistoryDateRow: {
     flexDirection: 'row',
@@ -1780,7 +1837,7 @@ const styles = StyleSheet.create({
   },
   rsvpHistoryDate: {
     fontSize: 11,
-    color: Colors.textNavyMuted,
+    color: Colors.iosTextMuted,
   },
   rsvpStatusBadge: {
     flexDirection: 'row',
@@ -1796,27 +1853,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   contactsCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   contactCategoryGroup: {
     marginVertical: 4,
   },
   contactCategoryBadge: {
-    backgroundColor: Colors.yellowContainer,
+    backgroundColor: Colors.iosBackground,
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     marginBottom: 6,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
   },
   contactCategoryBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.iosTextSecondary,
   },
   contactRow: {
     flexDirection: 'row',

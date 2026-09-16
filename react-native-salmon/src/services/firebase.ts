@@ -34,7 +34,7 @@ try {
 export const db = getFirestore(app);
 export { app, auth };
 
-import { GoogleAuthProvider, signInWithCredential, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithCredential, signInAnonymously, User } from 'firebase/auth';
 
 /**
  * Sign in to Firebase Auth using Google idToken

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +11,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
 import { AnnouncementCard } from '../components/AnnouncementCard';
 import { VerificationModal } from '../components/VerificationModal';
-import { Colors } from '../constants/theme';
+import { CivicLogo } from '../components/CivicLogo';
+import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { isItemPinned } from '../types';
 
@@ -40,113 +42,165 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
     (a) => a.userRsvpStatus === 'ATTENDING'
   ).length;
 
+  const todayFormatted = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. HERO WELCOME CARD */}
+      {/* 1. ULTRA MODERN CITIZEN HERO BANNER */}
       <View style={styles.heroCard}>
-        <View style={styles.heroHeader}>
-          <View style={styles.heroGreeting}>
-            <Text style={styles.heroSubText}>Selamat Datang, Bapak/Ibu</Text>
-            <Text style={styles.heroUserName} numberOfLines={1}>
-              {currentUser.name}
-            </Text>
+        <View style={styles.heroTopRow}>
+          <View style={styles.avatarRow}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('ProfilTab')}
+              style={styles.avatarBorder}
+            >
+              {currentUser.avatarUrl ? (
+                <Image source={{ uri: currentUser.avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>
+                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'W'}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.greetingTextContainer}>
+              <View style={styles.dateRow}>
+                <Text style={styles.dateLabel}>{todayFormatted}</Text>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>Warga Aktif</Text>
+              </View>
+              <Text style={styles.greetingName} numberOfLines={1}>
+                {currentUser.name || 'Warga'}
+              </Text>
+              <Text style={styles.regionSubText}>
+                {currentUser.isVerifiedWarga && (currentUser.rt || currentUser.rw)
+                  ? `RT ${currentUser.rt || '-'} / RW ${currentUser.rw || '-'} • Kel. ${currentUser.kelurahan || 'Sukamaju'}`
+                  : 'Belum Terverifikasi Wilayah'}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.rtRwBadge}>
-            <Text style={styles.rtRwBadgeText}>
-              RT {currentUser.rt} / RW {currentUser.rw}
-            </Text>
+          {/* Minimalist Geometric Brand Logo */}
+          <View style={styles.heroLogoWrapper}>
+            <CivicLogo size={38} rotation="-14deg" />
           </View>
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Text style={styles.statNumber}>{publishedActivities.length}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              Kegiatan Bulan Ini
-            </Text>
+        {/* Dynamic Citizen Stats Pill Bar */}
+        <View style={styles.statsBar}>
+          <View style={styles.statItem}>
+            <View style={styles.statIconBox}>
+              <MaterialCommunityIcons name="calendar-check" size={18} color={Colors.salmonPrimary} />
+            </View>
+            <View>
+              <Text style={styles.statValue}>{publishedActivities.length}</Text>
+              <Text style={styles.statTitle}>Agenda Bulan Ini</Text>
+            </View>
           </View>
 
-          <View style={styles.statPill}>
-            <Text style={styles.statNumber}>{attendingCount}</Text>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              Status RSVP Hadir
-            </Text>
+          <View style={styles.statDivider} />
+
+          <View style={styles.statItem}>
+            <View style={[styles.statIconBox, { backgroundColor: '#E8F9ED' }]}>
+              <MaterialCommunityIcons name="account-check" size={18} color="#16A34A" />
+            </View>
+            <View>
+              <Text style={[styles.statValue, { color: '#16A34A' }]}>{attendingCount}</Text>
+              <Text style={styles.statTitle}>Hadir (RSVP)</Text>
+            </View>
           </View>
         </View>
       </View>
 
-      {/* UNVERIFIED RESIDENT ALERT BANNER */}
+      {/* UNVERIFIED RESIDENT ALERT BANNER (Soft Warm Warning) */}
       {!currentUser.isVerifiedWarga && (
         <TouchableOpacity
           style={styles.unverifiedBanner}
-          activeOpacity={0.9}
+          activeOpacity={0.88}
           onPress={() => setIsVerificationModalVisible(true)}
         >
           <View style={styles.unverifiedBannerIcon}>
-            <MaterialCommunityIcons
-              name="shield-alert"
-              size={24}
-              color={Colors.onYellowContainer}
-            />
+            <MaterialCommunityIcons name="shield-key-outline" size={22} color="#D97706" />
           </View>
           <View style={styles.unverifiedBannerContent}>
-            <Text style={styles.unverifiedBannerTitle}>
-              Belum Terverifikasi Warga
-            </Text>
+            <Text style={styles.unverifiedBannerTitle}>Belum Terverifikasi RT/RW</Text>
             <Text style={styles.unverifiedBannerText}>
-              Masukkan kode wilayah RT Anda untuk membuka akses RSVP kegiatan.
+              Ketik kode undangan wilayah Anda untuk membuka fitur konfirmasi kehadiran.
             </Text>
           </View>
-          <MaterialCommunityIcons
-            name="chevron-right"
-            size={22}
-            color={Colors.onYellowContainer}
-          />
+          <MaterialCommunityIcons name="chevron-right" size={20} color="#D97706" />
         </TouchableOpacity>
       )}
 
-      {/* 2. QUICK SHORTCUTS ROW */}
-      <View style={styles.shortcutsRow}>
+      {/* 2. 4-GRID QUICK CIVIC ACTIONS (Sleek Modern Squircles) */}
+      <View style={styles.quickGridContainer}>
         <TouchableOpacity
-          style={styles.shortcutButton}
-          activeOpacity={0.8}
+          style={styles.quickActionCard}
+          activeOpacity={0.85}
           onPress={() => navigation.navigate('KegiatanTab')}
         >
-          <MaterialCommunityIcons
-            name="calendar-text"
-            size={20}
-            color={Colors.skyBlueHeader}
-          />
-          <Text style={styles.shortcutText} numberOfLines={1}>
-            Semua Kegiatan
-          </Text>
+          <View style={[styles.quickActionIcon, { backgroundColor: '#FFEAE8' }]}>
+            <MaterialCommunityIcons name="calendar-text-outline" size={22} color={Colors.salmonPrimary} />
+          </View>
+          <Text style={styles.quickActionLabel}>Daftar Kegiatan</Text>
+          <Text style={styles.quickActionDesc}>Jadwal resmi RT/RW</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.shortcutButton}
-          activeOpacity={0.8}
+          style={styles.quickActionCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('PengumumanTab')}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#FFF5E5' }]}>
+            <MaterialCommunityIcons name="bullhorn-outline" size={22} color="#EA580C" />
+          </View>
+          <Text style={styles.quickActionLabel}>Warta Pengumuman</Text>
+          <Text style={styles.quickActionDesc}>Info darurat & surat</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          activeOpacity={0.85}
           onPress={() => navigation.navigate('KalenderTab')}
         >
-          <MaterialCommunityIcons
-            name="calendar-month"
-            size={20}
-            color={Colors.skyBlueHeader}
-          />
-          <Text style={styles.shortcutText} numberOfLines={1}>
-            Kalender Agenda
-          </Text>
+          <View style={[styles.quickActionIcon, { backgroundColor: '#EAF3FF' }]}>
+            <MaterialCommunityIcons name="calendar-month-outline" size={22} color="#007AFF" />
+          </View>
+          <Text style={styles.quickActionLabel}>Kalender Agenda</Text>
+          <Text style={styles.quickActionDesc}>Pantau hari & waktu</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('ProfilTab')}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#E8F9ED' }]}>
+            <MaterialCommunityIcons name="badge-account-outline" size={22} color="#16A34A" />
+          </View>
+          <Text style={styles.quickActionLabel}>KTP Digital Warga</Text>
+          <Text style={styles.quickActionDesc}>Identitas & kontak</Text>
         </TouchableOpacity>
       </View>
 
       {/* 3. PINNED ANNOUNCEMENTS */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Pengumuman Penting</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionBullet, { backgroundColor: '#EA580C' }]} />
+          <Text style={styles.sectionTitle}>Warta Terkini</Text>
+        </View>
         <TouchableOpacity
           onPress={() => navigation.navigate('PengumumanTab')}
           activeOpacity={0.7}
@@ -164,10 +218,15 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
       ))}
 
       {/* 4. UPCOMING ACTIVITIES */}
-      <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-        <View>
-          <Text style={styles.sectionTitle}>Kegiatan Mendatang</Text>
-          <Text style={styles.sectionSubtitle}>Wilayah RT 03 & RW 05</Text>
+      <View style={[styles.sectionHeader, { marginTop: 22 }]}>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionBullet, { backgroundColor: Colors.salmonPrimary }]} />
+          <View>
+            <Text style={styles.sectionTitle}>Agenda Kegiatan Warga</Text>
+            <Text style={styles.sectionSubtitle}>
+              Khusus Lingkungan RT {currentUser.rt || '03'} & RW {currentUser.rw || '05'}
+            </Text>
+          </View>
         </View>
         <TouchableOpacity
           onPress={() => navigation.navigate('KegiatanTab')}
@@ -200,29 +259,172 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: '#F8F9FB',
   },
   contentContainer: {
     padding: 16,
     paddingBottom: 110,
   },
-  unverifiedBanner: {
-    backgroundColor: Colors.yellowContainer,
-    borderWidth: 1.5,
-    borderColor: Colors.yellowBorderLis,
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ECEEF2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  avatarBorder: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FFEAE8',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.salmonPrimary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  avatarImg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.salmonContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
+    color: Colors.salmonPrimary,
+  },
+  greetingTextContainer: {
+    marginLeft: 14,
+    flex: 1,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8E8E93',
+    letterSpacing: 0.2,
+  },
+  liveDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#34C759',
+    marginHorizontal: 6,
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#34C759',
+  },
+  greetingName: {
+    fontSize: 19,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
+    color: '#1C1C1E',
+    letterSpacing: -0.3,
+  },
+  regionSubText: {
+    fontSize: 12,
+    color: '#636366',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  heroLogoWrapper: {
+    paddingLeft: 4,
+  },
+  statsBar: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
     borderRadius: 16,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ECEEF2',
+  },
+  statItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.salmonContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: 17,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
+    color: Colors.salmonPrimary,
+  },
+  statTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#636366',
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#E5E5EA',
+    marginHorizontal: 10,
+  },
+  unverifiedBanner: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderRadius: 16,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    gap: 10,
-    elevation: 1,
+    gap: 12,
   },
   unverifiedBannerIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: '#FDE68A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -232,119 +434,84 @@ const styles = StyleSheet.create({
   unverifiedBannerTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: Colors.onYellowContainer,
+    color: '#92400E',
   },
   unverifiedBannerText: {
     fontSize: 11,
-    color: Colors.onYellowContainer,
+    color: '#B45309',
     marginTop: 2,
     lineHeight: 15,
   },
-  heroCard: {
-    backgroundColor: Colors.skyBlueHeader,
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: Colors.black,
+  quickGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickActionCard: {
+    width: '48%',
+    flexGrow: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#ECEEF2',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
   },
-  heroHeader: {
-    flexDirection: 'row',
+  quickActionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    justifyContent: 'center',
+    marginBottom: 10,
   },
-  heroGreeting: {
-    flex: 1,
-    marginRight: 8,
-  },
-  heroSubText: {
+  quickActionLabel: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-  },
-  heroUserName: {
-    fontSize: 21,
     fontWeight: '800',
-    color: Colors.white,
-    marginTop: 2,
+    fontFamily: Fonts.headingBold,
+    color: '#1C1C1E',
+    marginBottom: 2,
   },
-  rtRwBadge: {
-    backgroundColor: Colors.yellowContainer,
-    borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  rtRwBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.onYellowContainer,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  statPill: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    padding: 12,
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.white,
-  },
-  statLabel: {
+  quickActionDesc: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 2,
-  },
-  shortcutsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 18,
-  },
-  shortcutButton: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    gap: 8,
-  },
-  shortcutText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
-    flexShrink: 1,
+    color: '#8E8E93',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionBullet: {
+    width: 4,
+    height: 18,
+    borderRadius: 2,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textNavyDark,
+    fontSize: 17,
+    fontWeight: '800',
+    fontFamily: Fonts.headingBold,
+    color: '#1C1C1E',
+    letterSpacing: -0.2,
   },
   sectionSubtitle: {
     fontSize: 11,
-    color: Colors.textNavyMuted,
-    marginTop: 1,
+    color: '#8E8E93',
+    marginTop: 2,
   },
   seeAllText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.skyBlueHeader,
+    color: Colors.salmonPrimary,
   },
 });

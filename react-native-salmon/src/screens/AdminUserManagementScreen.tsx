@@ -81,12 +81,15 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
     allUsers = [],
     currentUser,
     updateUserRoleByAdmin,
+    verifyUserByAdmin,
     isSuperAdmin,
     fetchAllUsers,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState<UserRoleType | 'ALL'>('ALL');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<
+    UserRoleType | 'ALL' | 'UNREGISTERED'
+  >('ALL');
   const [selectedUserForRole, setSelectedUserForRole] = useState<UserProfile | null>(null);
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<UserProfile | null>(null);
   const [pendingRole, setPendingRole] = useState<UserRoleType>('WARGA');
@@ -125,8 +128,16 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
         (user.phone && user.phone.includes(q)) ||
         (user.nik && user.nik.includes(q));
 
-      const matchRole =
-        selectedRoleFilter === 'ALL' || user.role === selectedRoleFilter;
+      let matchRole = true;
+      if (selectedRoleFilter === 'ALL') {
+        matchRole = true;
+      } else if (selectedRoleFilter === 'UNREGISTERED') {
+        matchRole = !user.isVerifiedWarga && user.role === 'WARGA';
+      } else if (selectedRoleFilter === 'WARGA') {
+        matchRole = !!user.isVerifiedWarga && user.role === 'WARGA';
+      } else {
+        matchRole = user.role === selectedRoleFilter;
+      }
 
       return matchSearch && matchRole;
     });
@@ -136,6 +147,7 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
   const roleCounts = useMemo(() => {
     const counts: Record<string, number> = {
       ALL: safeUsers.length,
+      UNREGISTERED: 0,
       WARGA: 0,
       RT: 0,
       RW: 0,
@@ -143,7 +155,10 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
       STAF_KELURAHAN: 0,
     };
     safeUsers.forEach((u) => {
-      if (u && counts[u.role] !== undefined) {
+      if (!u) return;
+      if (!u.isVerifiedWarga && u.role === 'WARGA') {
+        counts.UNREGISTERED++;
+      } else if (counts[u.role] !== undefined) {
         counts[u.role]++;
       } else {
         counts.WARGA++;
@@ -151,6 +166,26 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
     });
     return counts;
   }, [safeUsers]);
+
+  // Quick verify user as official warga
+  const handleVerifyWarga = (user: UserProfile) => {
+    Alert.alert(
+      'Verifikasi Akun Warga',
+      `Verifikasi "${user.name || user.email}" sebagai Warga resmi Sukamaju? Pengguna akan langsung mendapatkan status terverifikasi tanpa perlu kode undangan RT.`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Ya, Verifikasi',
+          onPress: async () => {
+            setIsUpdating(true);
+            const targetKey = user.email || user.id;
+            await verifyUserByAdmin(targetKey);
+            setIsUpdating(false);
+          },
+        },
+      ]
+    );
+  };
 
   // Open modal change role
   const handleOpenRoleModal = (user: UserProfile) => {
@@ -307,6 +342,33 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
             </Text>
           </TouchableOpacity>
 
+          {/* Chip: Belum Terdaftar */}
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              selectedRoleFilter === 'UNREGISTERED'
+                ? { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }
+                : { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+            ]}
+            onPress={() => setSelectedRoleFilter('UNREGISTERED')}
+          >
+            <MaterialCommunityIcons
+              name="account-clock"
+              size={14}
+              color={selectedRoleFilter === 'UNREGISTERED' ? '#B45309' : '#D97706'}
+              style={{ marginRight: 4 }}
+            />
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: selectedRoleFilter === 'UNREGISTERED' ? '#B45309' : '#D97706' },
+                selectedRoleFilter === 'UNREGISTERED' && { fontWeight: '700' },
+              ]}
+            >
+              Belum Terdaftar ({roleCounts.UNREGISTERED || 0})
+            </Text>
+          </TouchableOpacity>
+
           {AVAILABLE_ROLES.map((r) => {
             const isActive = selectedRoleFilter === r.role;
             return (
@@ -379,6 +441,11 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                             <Text style={styles.selfBadgeText}>Anda</Text>
                           </View>
                         )}
+                        {isUserSuperAdmin && (
+                          <View style={[styles.selfBadge, { backgroundColor: '#FEF3C7' }]}>
+                            <Text style={[styles.selfBadgeText, { color: '#B45309' }]}>Super Admin</Text>
+                          </View>
+                        )}
                       </View>
 
                       {/* Gmail Display */}
@@ -410,6 +477,8 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                           backgroundColor:
                             user.role === 'STAF_KELURAHAN'
                               ? Colors.yellowContainer
+                              : !user.isVerifiedWarga && user.role === 'WARGA'
+                              ? '#FEF3C7'
                               : '#E0F2FE',
                         },
                       ]}
@@ -418,12 +487,16 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                         name={
                           user.role === 'STAF_KELURAHAN'
                             ? 'shield-check'
+                            : !user.isVerifiedWarga && user.role === 'WARGA'
+                            ? 'account-clock-outline'
                             : 'account-circle'
                         }
                         size={14}
                         color={
                           user.role === 'STAF_KELURAHAN'
                             ? Colors.onYellowContainer
+                            : !user.isVerifiedWarga && user.role === 'WARGA'
+                            ? '#B45309'
                             : Colors.skyBlueHeader
                         }
                       />
@@ -434,11 +507,19 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                             color:
                               user.role === 'STAF_KELURAHAN'
                                 ? Colors.onYellowContainer
+                                : !user.isVerifiedWarga && user.role === 'WARGA'
+                                ? '#B45309'
                                 : Colors.skyBlueHeader,
+                            fontWeight:
+                              !user.isVerifiedWarga && user.role === 'WARGA'
+                                ? '700'
+                                : '600',
                           },
                         ]}
                       >
-                        {roleMeta.title}
+                        {!user.isVerifiedWarga && user.role === 'WARGA'
+                          ? 'Belum Terdaftar'
+                          : roleMeta.title}
                       </Text>
                     </View>
 
@@ -446,6 +527,21 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                       Login: {formatDateTime(user.lastLoginAt)}
                     </Text>
                   </View>
+
+                  {/* Warning Notice if user is not registered / verified yet */}
+                  {!user.isVerifiedWarga && user.role === 'WARGA' && (
+                    <View style={styles.unregisteredNoticeBanner}>
+                      <MaterialCommunityIcons
+                        name="alert-circle-outline"
+                        size={13}
+                        color="#B45309"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.unregisteredNoticeText}>
+                        Akun baru • Belum memasukkan kode verifikasi RT/RW
+                      </Text>
+                    </View>
+                  )}
 
                   {/* Action Buttons */}
                   <View style={styles.userActionRow}>
@@ -459,8 +555,24 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                         size={16}
                         color={Colors.skyBlueHeader}
                       />
-                      <Text style={styles.btnSecondaryText}>Lihat Profil</Text>
+                      <Text style={styles.btnSecondaryText}>Profil</Text>
                     </TouchableOpacity>
+
+                    {/* Quick Verify Button for Unregistered */}
+                    {!user.isVerifiedWarga && user.role === 'WARGA' && (
+                      <TouchableOpacity
+                        style={styles.btnVerifyQuick}
+                        onPress={() => handleVerifyWarga(user)}
+                        disabled={isUpdating}
+                      >
+                        <MaterialCommunityIcons
+                          name="check-decagram"
+                          size={15}
+                          color="#065F46"
+                        />
+                        <Text style={styles.btnVerifyQuickText}>Verifikasi</Text>
+                      </TouchableOpacity>
+                    )}
 
                     {/* Change Role Button */}
                     <TouchableOpacity
@@ -632,10 +744,29 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                     </View>
                   )}
                   <Text style={styles.detailNameText}>{selectedUserForDetail.name}</Text>
-                  <View style={styles.detailRolePill}>
-                    <Text style={styles.detailRolePillText}>
-                      {UserRolesMeta[selectedUserForDetail.role]?.title ||
-                        selectedUserForDetail.role}
+                  <View
+                    style={[
+                      styles.detailRolePill,
+                      !selectedUserForDetail.isVerifiedWarga &&
+                        selectedUserForDetail.role === 'WARGA' && {
+                          backgroundColor: '#FEF3C7',
+                        },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.detailRolePillText,
+                        !selectedUserForDetail.isVerifiedWarga &&
+                          selectedUserForDetail.role === 'WARGA' && {
+                            color: '#B45309',
+                          },
+                      ]}
+                    >
+                      {!selectedUserForDetail.isVerifiedWarga &&
+                      selectedUserForDetail.role === 'WARGA'
+                        ? 'Belum Terdaftar'
+                        : UserRolesMeta[selectedUserForDetail.role]?.title ||
+                          selectedUserForDetail.role}
                     </Text>
                   </View>
                 </View>
@@ -735,6 +866,39 @@ export const AdminUserManagementScreen: React.FC<AdminUserManagementScreenProps>
                 </View>
 
                 {/* Direct Action */}
+                {!selectedUserForDetail.isVerifiedWarga &&
+                  selectedUserForDetail.role === 'WARGA' && (
+                    <TouchableOpacity
+                      style={[
+                        styles.btnSetRoleFromDetail,
+                        {
+                          backgroundColor: '#D1FAE5',
+                          borderColor: '#34D399',
+                          marginBottom: 8,
+                        },
+                      ]}
+                      onPress={() => {
+                        const target = selectedUserForDetail;
+                        setSelectedUserForDetail(null);
+                        handleVerifyWarga(target);
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="check-decagram"
+                        size={18}
+                        color="#065F46"
+                      />
+                      <Text
+                        style={[
+                          styles.btnSetRoleFromDetailText,
+                          { color: '#065F46' },
+                        ]}
+                      >
+                        Verifikasi Jadi Warga Sukamaju
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
                 <TouchableOpacity
                   style={styles.btnSetRoleFromDetail}
                   onPress={() => {
@@ -1289,5 +1453,42 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: Fonts.headingBold,
     color: Colors.onYellowContainer,
+  },
+  unregisteredNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  unregisteredNoticeText: {
+    fontSize: 11,
+    color: '#B45309',
+    fontFamily: Fonts.bodyMedium,
+    flex: 1,
+  },
+  btnVerifyQuick: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#D1FAE5',
+    borderWidth: 1,
+    borderColor: '#34D399',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  btnVerifyQuickText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065F46',
+    fontFamily: Fonts.headingBold,
   },
 });

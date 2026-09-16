@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -20,6 +21,7 @@ import { TimePickerModal } from '../components/TimePickerModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
 import { CategoryMeta, Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import { uploadMediaToDrive } from '../services/driveMediaService';
 import {
   ActivityCategoryType,
   ActivityItem,
@@ -109,6 +111,7 @@ export const CreateEditActivityScreen: React.FC<
     existing?.imageUrl || null
   );
   const [isPhotoPickerVisible, setIsPhotoPickerVisible] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [isPinned, setIsPinned] = useState<boolean>(existing?.isPinned || false);
   const [pinnedAt, setPinnedAt] = useState<string | null>(existing?.pinnedAt || null);
@@ -213,14 +216,34 @@ export const CreateEditActivityScreen: React.FC<
       });
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        const onlineUri = asset.base64
-          ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
-          : asset.uri;
-        setPhotoUri(onlineUri);
-        showToast('Foto poster kegiatan berhasil diproses & siap disimpan online!');
+        setIsUploadingPhoto(true);
+        showToast('Mengunggah poster cover ke Google Drive...');
+        try {
+          const driveRes = await uploadMediaToDrive({
+            fileUri: asset.uri,
+            base64Data: asset.base64,
+            fileName: asset.fileName || `cover_${Date.now()}.jpg`,
+            mimeType: asset.mimeType || 'image/jpeg',
+            activityId: editId || `ACT-${Date.now() % 100000}`,
+            activityTitle: title.trim() || 'Cover Kegiatan',
+            mediaType: 'PHOTO',
+            uploadedBy: currentUser.name || currentUser.email || 'Pengurus',
+          });
+          if (driveRes.success && driveRes.thumbnailUrl) {
+            setPhotoUri(driveRes.thumbnailUrl);
+            showToast('Poster kegiatan berhasil diunggah ke Google Drive!');
+          } else {
+            setPhotoUri(asset.uri);
+          }
+        } catch {
+          setPhotoUri(asset.uri);
+        } finally {
+          setIsUploadingPhoto(false);
+        }
       }
     } catch (e) {
       console.warn('Gallery error:', e);
+      setIsUploadingPhoto(false);
       showToast('Gagal memilih foto dari galeri.');
     }
   };
@@ -236,19 +259,39 @@ export const CreateEditActivityScreen: React.FC<
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [16, 9],
-        quality: 0.5,
+        quality: 0.7,
         base64: true,
       });
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        const onlineUri = asset.base64
-          ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
-          : asset.uri;
-        setPhotoUri(onlineUri);
-        showToast('Foto kamera berhasil diproses & siap disimpan online!');
+        setIsUploadingPhoto(true);
+        showToast('Mengunggah poster kamera ke Google Drive...');
+        try {
+          const driveRes = await uploadMediaToDrive({
+            fileUri: asset.uri,
+            base64Data: asset.base64,
+            fileName: `cover_${Date.now()}.jpg`,
+            mimeType: asset.mimeType || 'image/jpeg',
+            activityId: editId || `ACT-${Date.now() % 100000}`,
+            activityTitle: title.trim() || 'Cover Kegiatan',
+            mediaType: 'PHOTO',
+            uploadedBy: currentUser.name || currentUser.email || 'Pengurus',
+          });
+          if (driveRes.success && driveRes.thumbnailUrl) {
+            setPhotoUri(driveRes.thumbnailUrl);
+            showToast('Poster kegiatan berhasil diunggah ke Google Drive!');
+          } else {
+            setPhotoUri(asset.uri);
+          }
+        } catch {
+          setPhotoUri(asset.uri);
+        } finally {
+          setIsUploadingPhoto(false);
+        }
       }
     } catch (e) {
       console.warn('Camera error:', e);
+      setIsUploadingPhoto(false);
       showToast('Gagal mengambil foto dari kamera.');
     }
   };
@@ -748,7 +791,14 @@ export const CreateEditActivityScreen: React.FC<
         </View>
 
         {/* 6. UPLOAD POSTER BOX / PREVIEW */}
-        {photoUri ? (
+        {isUploadingPhoto ? (
+          <View style={[styles.uploadPosterBox, { justifyContent: 'center', alignItems: 'center', paddingVertical: 20 }]}>
+            <ActivityIndicator size="small" color={Colors.skyBlueHeader} />
+            <Text style={[styles.uploadPosterSub, { marginTop: 8, color: Colors.skyBlueHeader }]}>
+              Mengunggah poster ke Google Drive...
+            </Text>
+          </View>
+        ) : photoUri ? (
           <View style={styles.photoPreviewCard}>
             <Image source={{ uri: photoUri }} style={styles.photoPreviewThumbnail} />
             <View style={styles.photoPreviewInfo}>

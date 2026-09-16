@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { NativeModules, Platform } from 'react-native';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { AppState, NativeModules, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   collection,
@@ -10,10 +10,12 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
+  arrayUnion,
+  increment,
 } from 'firebase/firestore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth, db, ensureAuth } from '../services/firebase';
-import { initializeNotifications, triggerNotification } from '../services/notificationService';
+import { initializeNotifications, triggerNotification, registerForPushNotificationsAsync } from '../services/notificationService';
 import {
   ActivityCategoryType,
   ActivityItem,
@@ -29,16 +31,21 @@ import {
   isItemPinned,
 } from '../types';
 import {
+  uploadMediaToDrive,
+  DriveUploadResponse,
+  parseGoogleDriveFileId,
+  buildMediaItemFromDriveId,
+} from '../services/driveMediaService';
+import {
   defaultContacts,
   defaultLocationPresets,
   defaultRegionCodes,
-  defaultUserProfile,
   sampleActivities,
   sampleAnnouncements,
 } from '../constants/sampleData';
 
 const STORAGE_KEYS = {
-  ACTIVITIES: '@salmon_activities_v2',
+  ACTIVITIES: '@salmon_activities_v3',
   ANNOUNCEMENTS: '@salmon_announcements_v2',
   CONTACTS: '@salmon_contacts_v2',
   REGION_CODES: '@salmon_region_codes_v2',
@@ -48,6 +55,8 @@ const STORAGE_KEYS = {
   NOTIFIED_ITEMS: '@salmon_notified_items_v2',
   DELETED_ITEMS: '@salmon_deleted_items_v2',
   IS_LOGGED_IN: '@salmon_is_logged_in_v2',
+  ALL_USERS: '@salmon_all_users_v2',
+  READ_ITEMS: '@salmon_read_items_v2',
 };
 
 export const defaultGuestProfile: UserProfile = {
@@ -57,9 +66,9 @@ export const defaultGuestProfile: UserProfile = {
   role: 'WARGA',
   age: '',
   address: '',
-  rt: '03',
-  rw: '05',
-  kelurahan: 'Sukamaju',
+  rt: '',
+  rw: '',
+  kelurahan: '',
   phone: '',
   email: '',
   avatarUrl: '',
@@ -81,7 +90,8 @@ const sanitizeForFirestore = (data: Record<string, any>): Record<string, any> =>
 // Helper to update Android Home Screen Widget (Scrollable ListView like WhatsApp)
 const syncHomeScreenWidget = (
   activitiesList: ActivityItem[],
-  announcementsList: AnnouncementItem[]
+  announcementsList: AnnouncementItem[],
+  deletedIds?: Set<string>
 ) => {
   try {
     if (Platform.OS !== 'android' || !NativeModules.WidgetUpdateModule) return;
@@ -96,9 +106,15 @@ const syncHomeScreenWidget = (
       timestamp: number;
     }> = [];
 
-    // 1. Gather published activities
+    // 1. Gather published activities (strictly excluding any deleted items)
     (activitiesList || [])
-      .filter((a) => a && a.approvalStatus === 'PUBLISHED')
+      .filter(
+        (a) =>
+          a &&
+          a.id &&
+          a.approvalStatus === 'PUBLISHED' &&
+          (!deletedIds || !deletedIds.has(a.id))
+      )
       .forEach((act) => {
         widgetItems.push({
           id: act.id,
@@ -110,9 +126,15 @@ const syncHomeScreenWidget = (
         });
       });
 
-    // 2. Gather published announcements
+    // 2. Gather published announcements (strictly excluding any deleted items)
     (announcementsList || [])
-      .filter((a) => a && a.approvalStatus === 'PUBLISHED')
+      .filter(
+        (a) =>
+          a &&
+          a.id &&
+          a.approvalStatus === 'PUBLISHED' &&
+          (!deletedIds || !deletedIds.has(a.id))
+      )
       .forEach((ann) => {
         widgetItems.push({
           id: ann.id,
@@ -143,6 +165,8 @@ const syncHomeScreenWidget = (
     if (topItems.length > 0 && WidgetUpdateModule.updateWidget) {
       const first = topItems[0];
       WidgetUpdateModule.updateWidget(first.title, first.subtitle, first.type);
+    } else if (WidgetUpdateModule.updateWidget) {
+      WidgetUpdateModule.updateWidget('Belum ada agenda', 'Semua kegiatan selesai', 'KEGIATAN');
     }
   } catch (e) {
     // Graceful fallback
@@ -155,6 +179,7 @@ interface AppContextType {
   allUsers: UserProfile[];
   isSuperAdmin: (email?: string) => boolean;
   updateUserRoleByAdmin: (targetEmailOrId: string, newRole: UserRoleType) => Promise<boolean>;
+  verifyUserByAdmin: (targetEmailOrId: string) => Promise<boolean>;
   fetchAllUsers: () => Promise<UserProfile[]>;
   activities: ActivityItem[];
   announcements: AnnouncementItem[];
@@ -284,6 +309,30 @@ interface AppContextType {
   deleteDocumentationPhoto: (activityId: string, photoUrl: string) => void;
   addDocumentationVideo: (activityId: string, videoUrl: string) => void;
   deleteDocumentationVideo: (activityId: string, videoUrl: string) => void;
+  addDocumentationMediaToDrive: (
+    activityId: string,
+    params: {
+      fileUri: string;
+      base64Data?: string | null;
+      fileName?: string;
+      mimeType?: string;
+      mediaType: 'PHOTO' | 'VIDEO';
+    }
+  ) => Promise<DriveUploadResponse>;
+  deleteDocumentationMediaFromDrive: (
+    activityId: string,
+    mediaIdOrUrl: string
+  ) => Promise<boolean>;
+  linkDocumentationMediaFromDrive: (
+    activityId: string,
+    fileIdOrUrl: string,
+    mediaType?: 'PHOTO' | 'VIDEO'
+  ) => Promise<boolean>;
+  readItemIds: Set<string>;
+  markItemAsRead: (itemId: string, type: 'ACTIVITY' | 'ANNOUNCEMENT') => Promise<void>;
+  isItemRead: (itemId: string) => boolean;
+  isOffline: boolean;
+  syncOfflineData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -296,12 +345,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isLoggedInRef.current = isLoggedIn;
   }, [isLoggedIn]);
 
-  const [activities, setActivities] = useState<ActivityItem[]>(sampleActivities);
-  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>(sampleAnnouncements);
+  const [readItemIds, setReadItemIds] = useState<Set<string>>(new Set());
+  const readItemIdsRef = useRef<Set<string>>(new Set());
+  const [isOffline, setIsOffline] = useState<boolean>(false);
+
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [contacts, setContacts] = useState<ContactItem[]>(defaultContacts);
   const [regionCodes, setRegionCodes] = useState<RegionInvitationCode[]>(defaultRegionCodes);
   const [locationPresets, setLocationPresets] = useState<LocationPresetItem[]>(defaultLocationPresets);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+
+  // Refs to always hold the most recent lists for async callbacks & widget updates
+  const activitiesRef = useRef<ActivityItem[]>([]);
+  const announcementsRef = useRef<AnnouncementItem[]>([]);
+
+  useEffect(() => {
+    activitiesRef.current = activities;
+  }, [activities]);
+
+  useEffect(() => {
+    announcementsRef.current = announcements;
+  }, [announcements]);
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ActivityCategoryType | null>(
     null
@@ -328,22 +393,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch {}
         }
 
-        const storedActivities = await AsyncStorage.getItem(STORAGE_KEYS.ACTIVITIES);
-        if (storedActivities) {
-          const parsed = JSON.parse(storedActivities);
-          if (Array.isArray(parsed)) {
-            parsed.sort((a: ActivityItem, b: ActivityItem) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
-            setActivities(parsed);
-          }
-        }
-
-        const storedAnnouncements = await AsyncStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS);
-        if (storedAnnouncements) {
-          const parsed = JSON.parse(storedAnnouncements);
-          if (Array.isArray(parsed)) {
-            parsed.sort((a: AnnouncementItem, b: AnnouncementItem) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
-            setAnnouncements(parsed);
-          }
+        // Load deleted items FIRST to guarantee no ghost data is rendered
+        const storedDeleted = await AsyncStorage.getItem(STORAGE_KEYS.DELETED_ITEMS);
+        if (storedDeleted) {
+          try {
+            deletedIdsRef.current = new Set(JSON.parse(storedDeleted));
+          } catch {}
         }
 
         const storedNotified = await AsyncStorage.getItem(STORAGE_KEYS.NOTIFIED_ITEMS);
@@ -353,11 +408,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch {}
         }
 
-        const storedDeleted = await AsyncStorage.getItem(STORAGE_KEYS.DELETED_ITEMS);
-        if (storedDeleted) {
+        const storedActivities = await AsyncStorage.getItem(STORAGE_KEYS.ACTIVITIES);
+        if (storedActivities) {
+          const parsed = JSON.parse(storedActivities);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter(
+              (item: ActivityItem) => item && item.id && !deletedIdsRef.current.has(item.id)
+            );
+            filtered.sort(
+              (a: ActivityItem, b: ActivityItem) =>
+                (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0)
+            );
+            setActivities(filtered);
+            activitiesRef.current = filtered;
+          }
+        }
+
+        const storedAnnouncements = await AsyncStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS);
+        if (storedAnnouncements) {
+          const parsed = JSON.parse(storedAnnouncements);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter(
+              (item: AnnouncementItem) => item && item.id && !deletedIdsRef.current.has(item.id)
+            );
+            filtered.sort(
+              (a: AnnouncementItem, b: AnnouncementItem) =>
+                (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0)
+            );
+            setAnnouncements(filtered);
+            announcementsRef.current = filtered;
+          }
+        }
+
+        // Instant sync to home screen widget with pruned cache
+        syncHomeScreenWidget(activitiesRef.current, announcementsRef.current, deletedIdsRef.current);
+
+        const storedUsers = await AsyncStorage.getItem(STORAGE_KEYS.ALL_USERS);
+        if (storedUsers) {
           try {
-            deletedIdsRef.current = new Set(JSON.parse(storedDeleted));
+            const parsed = JSON.parse(storedUsers);
+            if (Array.isArray(parsed)) {
+              setAllUsers(parsed);
+            }
           } catch {}
+        }
+
+        const storedRead = await AsyncStorage.getItem(STORAGE_KEYS.READ_ITEMS);
+        if (storedRead) {
+          try {
+            const parsed = JSON.parse(storedRead);
+            if (Array.isArray(parsed)) {
+              readItemIdsRef.current = new Set(parsed);
+              setReadItemIds(new Set(parsed));
+            }
+          } catch {}
+        }
+
+        const userKey = currentUserRef.current.email || currentUserRef.current.id;
+        if (userKey && userKey !== 'GUEST') {
+          activitiesRef.current.forEach((a) => {
+            if (a.readByUserIds && a.readByUserIds.includes(userKey)) {
+              readItemIdsRef.current.add(a.id);
+            }
+          });
+          announcementsRef.current.forEach((a) => {
+            if (a.readByUserIds && a.readByUserIds.includes(userKey)) {
+              readItemIdsRef.current.add(a.id);
+            }
+          });
+          setReadItemIds(new Set(readItemIdsRef.current));
         }
 
         const storedContacts = await AsyncStorage.getItem(STORAGE_KEYS.CONTACTS);
@@ -376,13 +495,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const annSnap = await getDocs(collection(db, 'announcements'));
             if (annSnap.empty) {
               for (const item of sampleAnnouncements) {
-                await setDoc(doc(db, 'announcements', item.id), sanitizeForFirestore(item));
+                if (!deletedIdsRef.current.has(item.id)) {
+                  await setDoc(doc(db, 'announcements', item.id), sanitizeForFirestore(item));
+                }
               }
             }
             const actSnap = await getDocs(collection(db, 'activities'));
             if (actSnap.empty) {
               for (const item of sampleActivities) {
-                await setDoc(doc(db, 'activities', item.id), sanitizeForFirestore(item));
+                if (!deletedIdsRef.current.has(item.id)) {
+                  await setDoc(doc(db, 'activities', item.id), sanitizeForFirestore(item));
+                }
               }
             }
             await AsyncStorage.setItem(STORAGE_KEYS.INITIAL_SEEDED, 'true');
@@ -429,8 +552,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isLoggedInRef.current || !currentUserRef.current.email) {
       return;
     }
-    // If already notified or item was deleted, skip
-    if (notifiedKeysRef.current.has(notificationKey) || deletedIdsRef.current.has(target.id)) {
+    // If already notified, deleted, or ALREADY READ, skip!
+    if (
+      notifiedKeysRef.current.has(notificationKey) ||
+      deletedIdsRef.current.has(target.id) ||
+      readItemIdsRef.current.has(target.id)
+    ) {
       return;
     }
     notifiedKeysRef.current.add(notificationKey);
@@ -455,7 +582,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (snapshot) => {
         const items: ActivityItem[] = [];
         snapshot.forEach((docSnap) => {
+          if (deletedIdsRef.current.has(docSnap.id)) {
+            return;
+          }
           const actData = docSnap.data() as Partial<ActivityItem>;
+          const currentUserKey =
+            currentUserRef.current.email
+              ? currentUserRef.current.email.toLowerCase().trim().replace(/[^a-z0-9]/g, '_')
+              : currentUserRef.current.id;
+
+          let personalRsvpStatus: RsvpStatusType = 'NONE';
+          if (actData.rsvpUsers && currentUserKey && actData.rsvpUsers[currentUserKey]) {
+            personalRsvpStatus = actData.rsvpUsers[currentUserKey] as RsvpStatusType;
+          } else if (actData.rsvpMap && currentUserKey && actData.rsvpMap[currentUserKey]) {
+            personalRsvpStatus = actData.rsvpMap[currentUserKey] as RsvpStatusType;
+          }
+
           items.push({
             id: docSnap.id,
             title: actData.title || '',
@@ -475,7 +617,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             confirmedCount: actData.confirmedCount ?? 0,
             maybeCount: actData.maybeCount ?? 0,
             quota: actData.quota ?? null,
-            userRsvpStatus: actData.userRsvpStatus || 'NONE',
+            userRsvpStatus: personalRsvpStatus,
+            rsvpUsers: actData.rsvpUsers || {},
             photos: Array.isArray(actData.photos)
               ? actData.photos
               : actData.imageUrl
@@ -491,12 +634,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             pinnedAt: actData.pinnedAt ?? null,
             pinExpiresAt: actData.pinExpiresAt ?? null,
             pinDurationLabel: actData.pinDurationLabel ?? null,
+            readByUserIds: Array.isArray(actData.readByUserIds) ? actData.readByUserIds : [],
+            readCount:
+              typeof actData.readCount === 'number'
+                ? actData.readCount
+                : actData.readByUserIds?.length || 0,
+            mediaArchive: Array.isArray(actData.mediaArchive) ? actData.mediaArchive : [],
           });
         });
         items.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
         setActivities(items);
+        activitiesRef.current = items;
         persistActivities(items);
-        syncHomeScreenWidget(items, announcements);
+        syncHomeScreenWidget(items, announcementsRef.current, deletedIdsRef.current);
 
         // Realtime notification evaluation
         if (isFirstActivitiesSnapshot.current) {
@@ -506,11 +656,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           items.forEach((it) => notifiedKeysRef.current.add(it.id + '_CREATED'));
         } else {
           items.forEach((item) => {
-            if (deletedIdsRef.current.has(item.id)) return;
+            if (deletedIdsRef.current.has(item.id) || readItemIdsRef.current.has(item.id)) return;
             const oldItem = prevActivitiesMap.current.get(item.id);
 
-            // ONLY NOTIFY ON NEW PUBLISHED ACTIVITIES
-            if (!oldItem && item.approvalStatus === 'PUBLISHED') {
+            // ONLY NOTIFY ON NEW PUBLISHED ACTIVITIES THAT USER HAS NOT READ
+            if (!oldItem && item.approvalStatus === 'PUBLISHED' && !readItemIdsRef.current.has(item.id)) {
               sendRealtimeNotification(
                 item.id + '_PUBLISHED',
                 'Kegiatan Baru!',
@@ -528,7 +678,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser.email, currentUser.id]);
 
   // 3. Realtime Firestore Sync for Announcements with Push Notifications & Widget Sync
   useEffect(() => {
@@ -537,6 +687,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (snapshot) => {
         const items: AnnouncementItem[] = [];
         snapshot.forEach((docSnap) => {
+          if (deletedIdsRef.current.has(docSnap.id)) {
+            return;
+          }
           const annData = docSnap.data() as Partial<AnnouncementItem>;
           items.push({
             id: docSnap.id,
@@ -555,12 +708,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             requirements: annData.requirements || [],
             additionalInfo: annData.additionalInfo ?? null,
             imageUrl: annData.imageUrl ?? null,
+            readByUserIds: Array.isArray(annData.readByUserIds) ? annData.readByUserIds : [],
+            readCount:
+              typeof annData.readCount === 'number'
+                ? annData.readCount
+                : annData.readByUserIds?.length || 0,
           });
         });
         items.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
         setAnnouncements(items);
+        announcementsRef.current = items;
         persistAnnouncements(items);
-        syncHomeScreenWidget(activities, items);
+        syncHomeScreenWidget(activitiesRef.current, items, deletedIdsRef.current);
 
         // Realtime notification evaluation for announcements
         if (isFirstAnnouncementsSnapshot.current) {
@@ -570,11 +729,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           items.forEach((it) => notifiedKeysRef.current.add(it.id + '_CREATED'));
         } else {
           items.forEach((item) => {
-            if (deletedIdsRef.current.has(item.id)) return;
+            if (deletedIdsRef.current.has(item.id) || readItemIdsRef.current.has(item.id)) return;
             const oldItem = prevAnnouncementsMap.current.get(item.id);
 
-            // ONLY NOTIFY ON NEW PUBLISHED ANNOUNCEMENTS
-            if (!oldItem && item.approvalStatus === 'PUBLISHED') {
+            // ONLY NOTIFY ON NEW PUBLISHED ANNOUNCEMENTS THAT USER HAS NOT READ
+            if (!oldItem && item.approvalStatus === 'PUBLISHED' && !readItemIdsRef.current.has(item.id)) {
               const shortContent =
                 item.content.length > 80 ? item.content.slice(0, 80) + '...' : item.content;
               sendRealtimeNotification(
@@ -598,7 +757,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 4. Continuously Sync to Android Home Screen Widget
   useEffect(() => {
-    syncHomeScreenWidget(activities, announcements);
+    syncHomeScreenWidget(activities, announcements, deletedIdsRef.current);
   }, [activities, announcements]);
 
   // 4. Realtime Firestore Sync for Region Codes & Location Presets
@@ -645,6 +804,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!userIdentifier || userIdentifier === 'USR-001') return;
 
     const userDocId = userIdentifier.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+
+    // Pastikan dokumen pengguna tercatat di Firestore agar langsung tampil di Admin User Management
+    if (currentUser.email && userIdentifier !== 'GUEST') {
+      ensureAuth()
+        .then(() => {
+          const userDocRef = doc(db, 'users', userDocId);
+          getDoc(userDocRef)
+            .then((snap) => {
+              if (!snap.exists()) {
+                const nowIso = new Date().toISOString();
+                setDoc(
+                  userDocRef,
+                  sanitizeForFirestore({
+                    ...currentUser,
+                    id: userDocId,
+                    email: currentUser.email,
+                    role: currentUser.role || 'WARGA',
+                    userRole: currentUser.role || 'WARGA',
+                    isVerifiedWarga: !!currentUser.isVerifiedWarga,
+                    createdAt: currentUser.createdAt || nowIso,
+                    lastLoginAt: nowIso,
+                  }),
+                  { merge: true }
+                ).catch((e) => console.warn('Auto-create user doc in Firestore:', e));
+              }
+            })
+            .catch(() => {});
+        })
+        .catch(() => {});
+    }
+
     const unsubscribe = onSnapshot(
       doc(db, 'users', userDocId),
       (docSnap) => {
@@ -672,9 +862,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 6. Realtime Firestore Sync for All Registered Users (So Admin sees new users immediately)
   useEffect(() => {
+    if (!isLoggedIn) return;
+
+    let isSubscribed = true;
     const unsubscribe = onSnapshot(
       collection(db, 'users'),
       (snapshot) => {
+        if (!isSubscribed) return;
         const list: UserProfile[] = [];
         snapshot.forEach((docSnap) => {
           const uData = docSnap.data() as Record<string, any>;
@@ -715,18 +909,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return timeB.localeCompare(timeA);
         });
         setAllUsers(list);
+        try {
+          AsyncStorage.setItem(STORAGE_KEYS.ALL_USERS, JSON.stringify(list));
+        } catch {}
       },
       (error) => {
         console.warn('Firestore users listener error:', error);
       }
     );
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
+  }, [isLoggedIn, currentUser?.id]);
 
   // Fetch All Users on Demand
   const fetchAllUsers = async (): Promise<UserProfile[]> => {
     try {
+      await ensureAuth().catch(() => {});
       const snap = await getDocs(collection(db, 'users'));
       if (!snap.empty) {
         const list: UserProfile[] = [];
@@ -769,6 +970,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return timeB.localeCompare(timeA);
         });
         setAllUsers(list);
+        try {
+          await AsyncStorage.setItem(STORAGE_KEYS.ALL_USERS, JSON.stringify(list));
+        } catch {}
         return list;
       }
       return [];
@@ -806,6 +1010,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.warn('Gagal update role oleh admin:', error);
       showToast('Gagal mengubah peran. Silakan periksa koneksi internet.');
+      return false;
+    }
+  };
+
+  // Admin function: verifikasi pengguna yang belum terdaftar menjadi Warga resmi
+  const verifyUserByAdmin = async (targetEmailOrId: string): Promise<boolean> => {
+    try {
+      const userDocId = targetEmailOrId.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const nowIso = new Date().toISOString();
+      await setDoc(
+        doc(db, 'users', userDocId),
+        {
+          isVerifiedWarga: true,
+          role: 'WARGA',
+          userRole: 'WARGA',
+          verifiedAt: nowIso,
+          verifiedCode: 'ADMIN_VERIFIED',
+        },
+        { merge: true }
+      );
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === userDocId || u.email?.toLowerCase() === targetEmailOrId.toLowerCase()
+            ? { ...u, isVerifiedWarga: true, role: 'WARGA', verifiedAt: nowIso, verifiedCode: 'ADMIN_VERIFIED' }
+            : u
+        )
+      );
+      showToast('Pengguna berhasil diverifikasi sebagai Warga resmi!');
+      return true;
+    } catch (error) {
+      console.warn('Gagal verifikasi user oleh admin:', error);
+      showToast('Gagal memverifikasi pengguna. Periksa koneksi internet.');
       return false;
     }
   };
@@ -1003,9 +1239,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isVerifiedWarga: true,
       verifiedCode: match.code,
       verifiedAt: 'Hari Ini',
-      rt: match.rt !== 'Semua RT' ? match.rt : currentUser.rt,
-      rw: match.rw,
-      kelurahan: match.kelurahan,
+      rt: match.rt || '01',
+      rw: match.rw || '05',
+      kelurahan: match.kelurahan || 'Sukamaju',
     };
 
     setCurrentUser(updatedUser);
@@ -1088,17 +1324,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const userDocId = cleanEmail.replace(/[^a-z0-9]/g, '_');
     const nowIso = new Date().toISOString();
 
+    let fcmToken: string | null = null;
+    try {
+      fcmToken = await registerForPushNotificationsAsync();
+    } catch {}
+
     let finalRole: UserRoleType = isAdmin ? 'STAF_KELURAHAN' : 'WARGA';
     let finalProfile: UserProfile = {
       id: userDocId,
-      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga Sukamaju'),
+      name: profile.name || (isAdmin ? 'Salman Akhdan (Admin)' : 'Warga'),
       nik: isAdmin ? '3201012345670001' : '',
       email: cleanEmail,
       phone: '',
       role: finalRole,
-      rt: isAdmin ? '002' : '03',
-      rw: '005',
-      kelurahan: 'Sukamaju',
+      rt: isAdmin ? '002' : '',
+      rw: isAdmin ? '005' : '',
+      kelurahan: isAdmin ? 'Sukamaju' : '',
       avatarUrl: profile.photoUrl || undefined,
       isVerifiedWarga: isAdmin,
       lastLoginAt: nowIso,
@@ -1107,6 +1348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Check if user already exists in Firestore and persist
     try {
+      await ensureAuth().catch(() => {});
       const existingUserSnap = await getDoc(doc(db, 'users', userDocId));
       if (existingUserSnap.exists()) {
         const remoteData = existingUserSnap.data() as UserProfile;
@@ -1131,6 +1373,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastLoginAt: nowIso,
             name: finalProfile.name,
             avatarUrl: finalProfile.avatarUrl || null,
+            ...(fcmToken ? { fcmToken } : {}),
           }),
           { merge: true }
         );
@@ -1144,6 +1387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             email: cleanEmail,
             role: finalRole,
             userRole: finalRole,
+            ...(fcmToken ? { fcmToken } : {}),
           }),
           { merge: true }
         );
@@ -1157,7 +1401,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const filtered = prev.filter(
         (u) => u.email?.toLowerCase() !== cleanEmail && u.id !== userDocId
       );
-      return [finalProfile, ...filtered];
+      const merged = [finalProfile, ...filtered];
+      try {
+        AsyncStorage.setItem(STORAGE_KEYS.ALL_USERS, JSON.stringify(merged));
+      } catch {}
+      return merged;
     });
 
     setIsLoggedIn(true);
@@ -1169,6 +1417,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(finalProfile);
     currentUserRef.current = finalProfile;
     persistProfile(finalProfile);
+    fetchAllUsers().catch(() => {});
     showToast(`Selamat datang, ${finalProfile.name}!`);
   };
 
@@ -1229,8 +1478,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Sync to Firestore
       try {
+        const userKey = currentUser.email
+          ? currentUser.email.toLowerCase().trim().replace(/[^a-z0-9]/g, '_')
+          : currentUser.id;
+
         await updateDoc(doc(db, 'activities', activityId), {
           userRsvpStatus: newStatus,
+          [`rsvpUsers.${userKey}`]: newStatus,
           confirmedCount: newConfirmed,
           maybeCount: newMaybe,
         });
@@ -1518,12 +1772,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     } catch {}
 
-    setActivities((prev) => {
-      const updated = prev.filter((item) => item.id !== activityId);
-      persistActivities(updated);
-      syncHomeScreenWidget(updated, announcements);
-      return updated;
-    });
+    const updated = activitiesRef.current.filter((item) => item.id !== activityId);
+    setActivities(updated);
+    activitiesRef.current = updated;
+    persistActivities(updated);
+    syncHomeScreenWidget(updated, announcementsRef.current, deletedIdsRef.current);
 
     try {
       await deleteDoc(doc(db, 'activities', activityId));
@@ -1760,6 +2013,220 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Video dokumentasi dihapus.');
   };
 
+  const addDocumentationMediaToDrive = async (
+    activityId: string,
+    params: {
+      fileUri: string;
+      base64Data?: string | null;
+      fileName?: string;
+      mimeType?: string;
+      mediaType: 'PHOTO' | 'VIDEO';
+    }
+  ): Promise<DriveUploadResponse> => {
+    const target = activities.find((item) => item.id === activityId);
+    const activityTitle = target?.title || 'Kegiatan Salmon';
+    const uploader =
+      currentUserRef.current.name || currentUserRef.current.email || 'Pengurus';
+
+    const result = await uploadMediaToDrive({
+      fileUri: params.fileUri,
+      base64Data: params.base64Data,
+      fileName: params.fileName,
+      mimeType: params.mimeType,
+      activityId,
+      activityTitle,
+      mediaType: params.mediaType,
+      uploadedBy: uploader,
+    });
+
+    if (!result.success || !result.mediaItem) {
+      showToast(result.error || 'Gagal mengunggah media ke Google Drive');
+      return result;
+    }
+
+    const newItem = result.mediaItem;
+    const currentArchive = target?.mediaArchive || [];
+    const mediaArchiveList = [newItem, ...currentArchive];
+    const photoUrl = newItem.thumbnailUrl;
+    const videoUrl = newItem.streamUrl || newItem.viewUrl;
+
+    const newPhotos =
+      newItem.type === 'PHOTO'
+        ? [photoUrl, ...(target?.photos || [])]
+        : target?.photos || [];
+    const newVideos =
+      newItem.type === 'VIDEO'
+        ? [videoUrl, ...(target?.videos || [])]
+        : target?.videos || [];
+
+    // Optimistic local update
+    setActivities((prev) => {
+      const updated = prev.map((item) =>
+        item.id === activityId
+          ? {
+              ...item,
+              mediaArchive: mediaArchiveList,
+              photos: newPhotos,
+              videos: newVideos,
+            }
+          : item
+      );
+      persistActivities(updated);
+      return updated;
+    });
+
+    try {
+      const updatePayload: Record<string, any> = {
+        mediaArchive: arrayUnion(newItem),
+      };
+      if (newItem.type === 'PHOTO') {
+        updatePayload.photos = arrayUnion(photoUrl);
+      } else {
+        updatePayload.videos = arrayUnion(videoUrl);
+      }
+      await updateDoc(doc(db, 'activities', activityId), updatePayload);
+    } catch (e) {
+      console.warn('Gagal simpan mediaArchive ke Firestore:', e);
+    }
+
+    showToast(
+      `${newItem.type === 'PHOTO' ? 'Foto' : 'Video'} berhasil diarsipkan di Google Drive!`
+    );
+    return result;
+  };
+
+  const deleteDocumentationMediaFromDrive = async (
+    activityId: string,
+    mediaIdOrUrl: string
+  ): Promise<boolean> => {
+    const target = activities.find((item) => item.id === activityId);
+    if (!target) return false;
+
+    const updatedArchive = (target.mediaArchive || []).filter(
+      (m) =>
+        m.id !== mediaIdOrUrl &&
+        m.thumbnailUrl !== mediaIdOrUrl &&
+        m.viewUrl !== mediaIdOrUrl &&
+        m.streamUrl !== mediaIdOrUrl
+    );
+    const updatedPhotos = (target.photos || []).filter(
+      (p) => p !== mediaIdOrUrl && !mediaIdOrUrl.includes(p)
+    );
+    const updatedVideos = (target.videos || []).filter(
+      (v) => v !== mediaIdOrUrl && !mediaIdOrUrl.includes(v)
+    );
+
+    setActivities((prev) => {
+      const updated = prev.map((item) =>
+        item.id === activityId
+          ? {
+              ...item,
+              mediaArchive: updatedArchive,
+              photos: updatedPhotos,
+              videos: updatedVideos,
+            }
+          : item
+      );
+      persistActivities(updated);
+      return updated;
+    });
+
+    try {
+      await updateDoc(doc(db, 'activities', activityId), {
+        mediaArchive: updatedArchive,
+        photos: updatedPhotos,
+        videos: updatedVideos,
+      });
+      showToast('Media dokumentasi telah dihapus.');
+      return true;
+    } catch (e) {
+      console.warn('Gagal hapus media dokumentasi di Firestore:', e);
+      showToast('Media dihapus dari tampilan lokal.');
+      return true;
+    }
+  };
+
+  const linkDocumentationMediaFromDrive = async (
+    activityId: string,
+    fileIdOrUrl: string,
+    mediaType: 'PHOTO' | 'VIDEO' = 'PHOTO'
+  ): Promise<boolean> => {
+    const fileId = parseGoogleDriveFileId(fileIdOrUrl);
+    if (!fileId) {
+      showToast('Link atau ID Google Drive tidak valid!');
+      return false;
+    }
+
+    const target = activities.find((item) => item.id === activityId);
+    if (!target) {
+      showToast('Kegiatan tidak ditemukan.');
+      return false;
+    }
+
+    const uploader =
+      currentUserRef.current.name || currentUserRef.current.email || 'Pengurus';
+
+    const newItem = buildMediaItemFromDriveId(
+      fileId,
+      mediaType,
+      undefined,
+      uploader
+    );
+
+    const currentArchive = target.mediaArchive || [];
+    if (currentArchive.some((m) => m.id === fileId)) {
+      showToast('Media Google Drive ini sudah ada di arsip kegiatan.');
+      return true;
+    }
+
+    const mediaArchiveList = [newItem, ...currentArchive];
+    const photoUrl = newItem.thumbnailUrl;
+    const videoUrl = newItem.streamUrl || newItem.viewUrl;
+
+    const newPhotos =
+      newItem.type === 'PHOTO'
+        ? [photoUrl, ...(target.photos || [])]
+        : target.photos || [];
+    const newVideos =
+      newItem.type === 'VIDEO'
+        ? [videoUrl, ...(target.videos || [])]
+        : target.videos || [];
+
+    setActivities((prev) => {
+      const updated = prev.map((item) =>
+        item.id === activityId
+          ? {
+              ...item,
+              mediaArchive: mediaArchiveList,
+              photos: newPhotos,
+              videos: newVideos,
+            }
+          : item
+      );
+      persistActivities(updated);
+      return updated;
+    });
+
+    try {
+      const updatePayload: Record<string, any> = {
+        mediaArchive: arrayUnion(newItem),
+      };
+      if (newItem.type === 'PHOTO') {
+        updatePayload.photos = arrayUnion(photoUrl);
+      } else {
+        updatePayload.videos = arrayUnion(videoUrl);
+      }
+      await updateDoc(doc(db, 'activities', activityId), updatePayload);
+    } catch (e) {
+      console.warn('Gagal simpan link mediaArchive ke Firestore:', e);
+    }
+
+    showToast(
+      `${newItem.type === 'PHOTO' ? 'Foto' : 'Video'} Google Drive berhasil ditautkan ke arsip!`
+    );
+    return true;
+  };
+
   const addAnnouncement = async (params: {
     title: string;
     content: string;
@@ -1963,12 +2430,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     } catch {}
 
-    setAnnouncements((prev) => {
-      const updated = prev.filter((item) => item.id !== announcementId);
-      persistAnnouncements(updated);
-      syncHomeScreenWidget(activities, updated);
-      return updated;
-    });
+    const updated = announcementsRef.current.filter((item) => item.id !== announcementId);
+    setAnnouncements(updated);
+    announcementsRef.current = updated;
+    persistAnnouncements(updated);
+    syncHomeScreenWidget(activitiesRef.current, updated, deletedIdsRef.current);
 
     try {
       await deleteDoc(doc(db, 'announcements', announcementId));
@@ -2157,6 +2623,237 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Kontak telah dihapus.');
   };
 
+  const isItemRead = useCallback((itemId: string): boolean => {
+    return readItemIdsRef.current.has(itemId);
+  }, []);
+
+  const markItemAsRead = useCallback(
+    async (itemId: string, type: 'ACTIVITY' | 'ANNOUNCEMENT') => {
+      if (!itemId) return;
+
+      const alreadyRead = readItemIdsRef.current.has(itemId);
+      if (alreadyRead) return;
+
+      readItemIdsRef.current.add(itemId);
+      setReadItemIds(new Set(readItemIdsRef.current));
+
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.READ_ITEMS,
+          JSON.stringify(Array.from(readItemIdsRef.current))
+        );
+      } catch (err) {
+        console.warn('Gagal simpan read items ke AsyncStorage:', err);
+      }
+
+      // Always ensure notification deduplication key is recorded so notifications never re-fire
+      notifiedKeysRef.current.add(itemId + '_CREATED');
+      notifiedKeysRef.current.add(itemId + '_ANN_PUBLISHED');
+
+      const userKey = currentUserRef.current.email || currentUserRef.current.id;
+
+      // Optimistically update reader count in local state
+      if (type === 'ACTIVITY') {
+        setActivities((prev) => {
+          const updated = prev.map((act) => {
+            if (act.id !== itemId) return act;
+            const currentList = act.readByUserIds || [];
+            const userAlreadyCounted = userKey && userKey !== 'GUEST' && currentList.includes(userKey);
+            const nextList =
+              userAlreadyCounted || !userKey || userKey === 'GUEST'
+                ? currentList
+                : [...currentList, userKey];
+            const nextCount = (act.readCount || 0) + (userAlreadyCounted ? 0 : 1);
+            return {
+              ...act,
+              readByUserIds: nextList,
+              readCount: Math.max(nextCount, nextList.length),
+            };
+          });
+          persistActivities(updated);
+          return updated;
+        });
+      } else {
+        setAnnouncements((prev) => {
+          const updated = prev.map((ann) => {
+            if (ann.id !== itemId) return ann;
+            const currentList = ann.readByUserIds || [];
+            const userAlreadyCounted = userKey && userKey !== 'GUEST' && currentList.includes(userKey);
+            const nextList =
+              userAlreadyCounted || !userKey || userKey === 'GUEST'
+                ? currentList
+                : [...currentList, userKey];
+            const nextCount = (ann.readCount || 0) + (userAlreadyCounted ? 0 : 1);
+            return {
+              ...ann,
+              readByUserIds: nextList,
+              readCount: Math.max(nextCount, nextList.length),
+            };
+          });
+          persistAnnouncements(updated);
+          return updated;
+        });
+      }
+
+      // Atomic sync to Firestore in background (if not already read)
+      try {
+        const collectionName = type === 'ACTIVITY' ? 'activities' : 'announcements';
+        const payload: Record<string, any> = {
+          readCount: increment(1),
+        };
+        if (userKey && userKey !== 'GUEST') {
+          payload.readByUserIds = arrayUnion(userKey);
+        }
+        await updateDoc(doc(db, collectionName, itemId), payload);
+      } catch (err) {
+        // Expected when offline; state is already preserved locally
+        console.log('markItemAsRead offline/server sync delayed:', err);
+      }
+    },
+    []
+  );
+
+  const syncOfflineData = async () => {
+    try {
+      // 1. Sync activities
+      const actSnap = await getDocs(collection(db, 'activities'));
+      setIsOffline(false);
+      if (!actSnap.empty) {
+        const items: ActivityItem[] = [];
+        actSnap.forEach((docSnap) => {
+          if (deletedIdsRef.current.has(docSnap.id)) return;
+          const actData = docSnap.data() as Partial<ActivityItem>;
+          items.push({
+            id: docSnap.id,
+            title: actData.title || '',
+            description: actData.description || '',
+            category: actData.category || 'KERJA_BAKTI',
+            customCategoryName: actData.customCategoryName,
+            dateIso: actData.dateIso || '',
+            formattedDate: actData.formattedDate || '',
+            timeSlot: actData.timeSlot || '',
+            locationName: actData.locationName || '',
+            locationAddress: actData.locationAddress || '',
+            latitude: actData.latitude || -6.215,
+            longitude: actData.longitude || 106.845,
+            targetRegion: actData.targetRegion || 'Semua Wilayah',
+            organizerRole: actData.organizerRole || 'WARGA',
+            organizerName: actData.organizerName || 'Warga',
+            confirmedCount: actData.confirmedCount ?? 0,
+            maybeCount: actData.maybeCount ?? 0,
+            quota: actData.quota ?? null,
+            userRsvpStatus: actData.userRsvpStatus || 'NONE',
+            photos: Array.isArray(actData.photos)
+              ? actData.photos
+              : actData.imageUrl
+              ? [actData.imageUrl]
+              : [],
+            imageUrl: actData.imageUrl || null,
+            videos: actData.videos || [],
+            approvalStatus: actData.approvalStatus || 'PUBLISHED',
+            needsFollowUp: actData.needsFollowUp ?? false,
+            followUpNote: actData.followUpNote ?? null,
+            isFeatured: actData.isFeatured ?? false,
+            isPinned: actData.isPinned ?? false,
+            pinnedAt: actData.pinnedAt ?? null,
+            pinExpiresAt: actData.pinExpiresAt ?? null,
+            pinDurationLabel: actData.pinDurationLabel ?? null,
+            readByUserIds: Array.isArray(actData.readByUserIds) ? actData.readByUserIds : [],
+            readCount:
+              typeof actData.readCount === 'number'
+                ? actData.readCount
+                : actData.readByUserIds?.length || 0,
+            mediaArchive: Array.isArray(actData.mediaArchive) ? actData.mediaArchive : [],
+          });
+        });
+        items.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+        setActivities(items);
+        activitiesRef.current = items;
+        persistActivities(items);
+      }
+
+      // 2. Sync announcements
+      const annSnap = await getDocs(collection(db, 'announcements'));
+      if (!annSnap.empty) {
+        const items: AnnouncementItem[] = [];
+        annSnap.forEach((docSnap) => {
+          if (deletedIdsRef.current.has(docSnap.id)) return;
+          const annData = docSnap.data() as Partial<AnnouncementItem>;
+          items.push({
+            id: docSnap.id,
+            title: annData.title || '',
+            content: annData.content || '',
+            urgency: annData.urgency || 'INFO',
+            targetRegion: annData.targetRegion || 'Semua Wilayah',
+            authorRole: annData.authorRole || 'WARGA',
+            authorName: annData.authorName || 'Pengurus',
+            formattedDate: annData.formattedDate || '',
+            isPinned: annData.isPinned ?? false,
+            pinnedAt: annData.pinnedAt ?? null,
+            pinExpiresAt: annData.pinExpiresAt ?? null,
+            pinDurationLabel: annData.pinDurationLabel ?? null,
+            approvalStatus: annData.approvalStatus || 'PUBLISHED',
+            requirements: annData.requirements || [],
+            additionalInfo: annData.additionalInfo ?? null,
+            imageUrl: annData.imageUrl ?? null,
+            readByUserIds: Array.isArray(annData.readByUserIds) ? annData.readByUserIds : [],
+            readCount:
+              typeof annData.readCount === 'number'
+                ? annData.readCount
+                : annData.readByUserIds?.length || 0,
+          });
+        });
+        items.sort((a, b) => (isItemPinned(b) ? 1 : 0) - (isItemPinned(a) ? 1 : 0));
+        setAnnouncements(items);
+        announcementsRef.current = items;
+        persistAnnouncements(items);
+      }
+
+      // 3. Instant sync to Android Home Screen Widget
+      syncHomeScreenWidget(activitiesRef.current, announcementsRef.current, deletedIdsRef.current);
+
+      // 4. Update readItemIds for current user
+      const userKey = currentUserRef.current.email || currentUserRef.current.id;
+      if (userKey && userKey !== 'GUEST') {
+        let changed = false;
+        activitiesRef.current.forEach((a) => {
+          if (a.readByUserIds?.includes(userKey) && !readItemIdsRef.current.has(a.id)) {
+            readItemIdsRef.current.add(a.id);
+            changed = true;
+          }
+        });
+        announcementsRef.current.forEach((a) => {
+          if (a.readByUserIds?.includes(userKey) && !readItemIdsRef.current.has(a.id)) {
+            readItemIdsRef.current.add(a.id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          setReadItemIds(new Set(readItemIdsRef.current));
+          await AsyncStorage.setItem(
+            STORAGE_KEYS.READ_ITEMS,
+            JSON.stringify(Array.from(readItemIdsRef.current))
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('syncOfflineData offline mode:', err);
+      setIsOffline(true);
+    }
+  };
+
+  // Re-sync data on App active state
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        syncOfflineData();
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -2165,6 +2862,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         allUsers,
         isSuperAdmin,
         updateUserRoleByAdmin,
+        verifyUserByAdmin,
         fetchAllUsers,
         activities,
         announcements,
@@ -2215,6 +2913,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteDocumentationPhoto,
         addDocumentationVideo,
         deleteDocumentationVideo,
+        addDocumentationMediaToDrive,
+        deleteDocumentationMediaFromDrive,
+        linkDocumentationMediaFromDrive,
+        readItemIds,
+        markItemAsRead,
+        isItemRead,
+        isOffline,
+        syncOfflineData,
       }}
     >
       {children}

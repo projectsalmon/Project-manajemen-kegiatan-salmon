@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
 import { VerificationModal } from '../components/VerificationModal';
-import { Colors, Fonts } from '../constants/theme';
+import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { RsvpStatusType } from '../types';
 

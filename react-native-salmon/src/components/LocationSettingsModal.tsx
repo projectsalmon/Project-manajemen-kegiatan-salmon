@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Alert,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,

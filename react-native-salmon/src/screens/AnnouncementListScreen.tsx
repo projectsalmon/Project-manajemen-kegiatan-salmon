@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Alert,
   FlatList,
   Image,
   Modal,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -21,6 +22,7 @@ import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
 import { PinDurationModal } from '../components/PinDurationModal';
 import { Colors, UrgencyMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
+import { uploadMediaToDrive } from '../services/driveMediaService';
 import {
   AnnouncementItem,
   AnnouncementUrgencyType,
@@ -39,6 +41,7 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
     deleteAnnouncement,
     togglePinAnnouncement,
     showToast,
+    markItemAsRead,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +56,7 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
     useState<AnnouncementItem | null>(null);
   const [isPinDurationModalVisible, setIsPinDurationModalVisible] = useState(false);
 
-  // Auto open announcement detail if opened from a notification tap
+  // Auto open announcement detail if opened from a notification tap or deep link
   useEffect(() => {
     const targetId = route?.params?.selectedAnnouncementId;
     if (targetId && announcements.length > 0) {
@@ -63,6 +66,16 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
       }
     }
   }, [route?.params?.selectedAnnouncementId, announcements]);
+
+  const markedAnnRef = useRef<string | null>(null);
+
+  // Mark announcement as read when opened in detail modal
+  useEffect(() => {
+    if (selectedForDetail?.id && markedAnnRef.current !== selectedForDetail.id) {
+      markedAnnRef.current = selectedForDetail.id;
+      markItemAsRead(selectedForDetail.id, 'ANNOUNCEMENT');
+    }
+  }, [selectedForDetail?.id, markItemAsRead]);
 
   const [waModalData, setWaModalData] = useState<{
     visible: boolean;
@@ -182,16 +195,32 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
               const result = await ImagePicker.launchCameraAsync({
                 allowsEditing: true,
                 aspect: [16, 9],
-                quality: 0.35,
+                quality: 0.7,
                 base64: true,
               });
               if (!result.canceled && result.assets.length > 0) {
                 const asset = result.assets[0];
-                const onlineUri = asset.base64
-                  ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
-                  : asset.uri;
-                setFormImageUrl(onlineUri);
-                showToast('Foto thumbnail berhasil dipilih.');
+                showToast('Mengunggah thumbnail ke Google Drive...');
+                try {
+                  const driveRes = await uploadMediaToDrive({
+                    fileUri: asset.uri,
+                    base64Data: asset.base64,
+                    fileName: `pengumuman_${Date.now()}.jpg`,
+                    mimeType: asset.mimeType || 'image/jpeg',
+                    activityId: 'PENGUMUMAN',
+                    activityTitle: formTitle.trim() || 'Pengumuman Warga',
+                    mediaType: 'PHOTO',
+                    uploadedBy: currentUser.name || currentUser.email || 'Pengurus',
+                  });
+                  if (driveRes.success && driveRes.thumbnailUrl) {
+                    setFormImageUrl(driveRes.thumbnailUrl);
+                    showToast('Thumbnail pengumuman tersimpan di Google Drive!');
+                  } else {
+                    setFormImageUrl(asset.uri);
+                  }
+                } catch {
+                  setFormImageUrl(asset.uri);
+                }
               }
             } catch (err) {
               console.warn('Gagal buka kamera:', err);
@@ -214,16 +243,32 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
                 mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [16, 9],
-                quality: 0.35,
+                quality: 0.5,
                 base64: true,
               });
               if (!result.canceled && result.assets.length > 0) {
                 const asset = result.assets[0];
-                const onlineUri = asset.base64
-                  ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`
-                  : asset.uri;
-                setFormImageUrl(onlineUri);
-                showToast('Foto thumbnail berhasil dipilih.');
+                showToast('Mengunggah thumbnail ke Google Drive...');
+                try {
+                  const driveRes = await uploadMediaToDrive({
+                    fileUri: asset.uri,
+                    base64Data: asset.base64,
+                    fileName: `pengumuman_${Date.now()}.jpg`,
+                    mimeType: asset.mimeType || 'image/jpeg',
+                    activityId: 'PENGUMUMAN',
+                    activityTitle: formTitle.trim() || 'Pengumuman Warga',
+                    mediaType: 'PHOTO',
+                    uploadedBy: currentUser.name || currentUser.email || 'Pengurus',
+                  });
+                  if (driveRes.success && driveRes.thumbnailUrl) {
+                    setFormImageUrl(driveRes.thumbnailUrl);
+                    showToast('Thumbnail pengumuman tersimpan di Google Drive!');
+                  } else {
+                    setFormImageUrl(asset.uri);
+                  }
+                } catch {
+                  setFormImageUrl(asset.uri);
+                }
               }
             } catch (err) {
               console.warn('Gagal buka galeri:', err);
@@ -393,13 +438,18 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
 
   return (
     <View style={styles.container}>
+      {/* 0. APPLE IOS LARGE TITLE HEADER */}
+      <View style={styles.largeTitleContainer}>
+        <Text style={styles.largeTitleText}>Pengumuman</Text>
+      </View>
+
       {/* 1. SEARCH INPUT */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <MaterialCommunityIcons
             name="magnify"
             size={20}
-            color={Colors.skyBlueHeader}
+            color={Colors.salmonPrimary}
           />
           <TextInput
             style={styles.searchInput}
@@ -490,7 +540,7 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
         )}
       />
 
-      {/* 4. FAB FOR ADMIN */}
+      {/* 4. FAB FOR ADMIN - Apple iOS Circular (+) */}
       {isAdmin && (
         <TouchableOpacity
           style={styles.fabButton}
@@ -498,24 +548,24 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
           onPress={handleOpenCreate}
         >
           <MaterialCommunityIcons
-            name="bullhorn"
-            size={20}
-            color={Colors.onYellowContainer}
+            name="plus"
+            size={28}
+            color={Colors.white}
           />
-          <Text style={styles.fabText}>Buat Pengumuman</Text>
         </TouchableOpacity>
       )}
 
-      {/* 5. ANNOUNCEMENT DETAIL MODAL */}
+      {/* 5. ANNOUNCEMENT DETAIL BOTTOM SHEET (Apple iOS Style) */}
       {selectedForDetail && (
         <Modal
           visible={selectedForDetail !== null}
           transparent
-          animationType="fade"
+          animationType="slide"
           onRequestClose={() => setSelectedForDetail(null)}
         >
           <View style={styles.modalBackdrop}>
             <View style={styles.detailModalContainer}>
+              <View style={styles.sheetHandle} />
               <View style={styles.detailModalHeader}>
                 <View
                   style={[
@@ -589,6 +639,42 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
                   {selectedForDetail.authorRole})
                 </Text>
 
+                {/* Reader Metric for Announcement */}
+                <View style={styles.readTrackingModalRow}>
+                  <View style={styles.readTrackingModalBadge}>
+                    <MaterialCommunityIcons
+                      name="eye-outline"
+                      size={15}
+                      color={
+                        currentUser.role !== 'WARGA'
+                          ? Colors.skyBlueHeader
+                          : Colors.textNavySecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.readTrackingModalText,
+                        currentUser.role !== 'WARGA' && styles.readTrackingModalTextAdmin,
+                      ]}
+                    >
+                      {selectedForDetail.readCount ||
+                        selectedForDetail.readByUserIds?.length ||
+                        0}{' '}
+                      orang telah membaca
+                    </Text>
+                  </View>
+                  {currentUser.role !== 'WARGA' && (
+                    <View style={styles.adminTrackingPill}>
+                      <MaterialCommunityIcons
+                        name="shield-check-outline"
+                        size={12}
+                        color={Colors.skyBlueHeader}
+                      />
+                      <Text style={styles.adminTrackingPillText}>Metrik Admin</Text>
+                    </View>
+                  )}
+                </View>
+
                 {/* WhatsApp Approval Banner for unapproved announcement */}
                 {selectedForDetail.approvalStatus !== 'PUBLISHED' && (
                   <View style={styles.detailApprovalWaBanner}>
@@ -639,12 +725,26 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
               </ScrollView>
 
               <View style={styles.detailModalFooter}>
+                <TouchableOpacity
+                  style={styles.detailShareWideBtn}
+                  activeOpacity={0.8}
+                  onPress={() => handleShareDetail(selectedForDetail)}
+                >
+                  <MaterialCommunityIcons
+                    name="share-variant"
+                    size={18}
+                    color={Colors.white}
+                  />
+                  <Text style={styles.detailShareWideBtnText}>
+                    Bagikan Pengumuman
+                  </Text>
+                </TouchableOpacity>
+
                 {isAdmin && (
                   <View style={styles.detailAdminActionsRow}>
                     <TouchableOpacity
                       style={[
                         styles.detailAdminBtn,
-                        styles.detailPinBtn,
                         isItemPinned(selectedForDetail) && styles.detailPinBtnActive,
                       ]}
                       activeOpacity={0.8}
@@ -670,11 +770,7 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
                       <MaterialCommunityIcons
                         name={isItemPinned(selectedForDetail) ? 'pin-off' : 'pin'}
                         size={16}
-                        color={
-                          isItemPinned(selectedForDetail)
-                            ? '#B45309'
-                            : Colors.skyBlueHeader
-                        }
+                        color={isItemPinned(selectedForDetail) ? '#B45309' : Colors.iosTextPrimary}
                       />
                       <Text
                         style={[
@@ -687,21 +783,16 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.detailAdminBtn, styles.detailEditBtn]}
+                      style={styles.detailAdminBtn}
                       activeOpacity={0.8}
                       onPress={() => handleOpenEdit(selectedForDetail)}
                     >
                       <MaterialCommunityIcons
                         name="pencil"
                         size={16}
-                        color={Colors.skyBlueHeader}
+                        color={Colors.iosTextPrimary}
                       />
-                      <Text
-                        style={[
-                          styles.detailAdminBtnText,
-                          { color: Colors.skyBlueHeader },
-                        ]}
-                      >
+                      <Text style={styles.detailAdminBtnText}>
                         Edit
                       </Text>
                     </TouchableOpacity>
@@ -719,39 +810,22 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
                       <MaterialCommunityIcons
                         name="trash-can-outline"
                         size={16}
-                        color="#DC2626"
+                        color={Colors.iosDanger}
                       />
-                      <Text style={[styles.detailAdminBtnText, { color: '#DC2626' }]}>
+                      <Text style={[styles.detailAdminBtnText, { color: Colors.iosDanger }]}>
                         Hapus
                       </Text>
                     </TouchableOpacity>
                   </View>
                 )}
 
-                <View style={styles.detailMainActionsRow}>
-                  <TouchableOpacity
-                    style={styles.detailShareWideBtn}
-                    activeOpacity={0.8}
-                    onPress={() => handleShareDetail(selectedForDetail)}
-                  >
-                    <MaterialCommunityIcons
-                      name="share-variant"
-                      size={18}
-                      color={Colors.skyBlueHeader}
-                    />
-                    <Text style={styles.detailShareWideBtnText}>
-                      Bagikan Pengumuman
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.detailCloseBtn}
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedForDetail(null)}
-                  >
-                    <Text style={styles.detailCloseBtnText}>Tutup</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={styles.detailCloseBtn}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedForDetail(null)}
+                >
+                  <Text style={styles.detailCloseBtnText}>Tutup</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -1179,28 +1253,39 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
+  },
+  largeTitleContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  largeTitleText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.iosTextPrimary,
+    letterSpacing: -0.5,
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 6,
     paddingBottom: 4,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 44,
     borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
+    borderColor: Colors.iosBorder,
     gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
-    color: Colors.textNavyDark,
+    fontSize: 14,
+    color: Colors.iosTextPrimary,
     includeFontPadding: false,
   },
   filterScrollView: {
@@ -1252,41 +1337,47 @@ const styles = StyleSheet.create({
   },
   fabButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 24,
     right: 20,
-    backgroundColor: Colors.yellowHighlight,
-    borderRadius: 30,
-    flexDirection: 'row',
+    width: 56,
+    height: 56,
+    backgroundColor: Colors.salmonPrimary,
+    borderRadius: 28,
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    gap: 6,
-    elevation: 4,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fabText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.onYellowContainer,
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: Colors.salmonPrimary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
   },
   detailModalContainer: {
-    backgroundColor: Colors.white,
-    borderRadius: 22,
-    padding: 18,
-    maxHeight: '85%',
+    backgroundColor: Colors.iosCard,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    maxHeight: '88%',
     width: '100%',
-    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.iosBorder,
     alignSelf: 'center',
-    overflow: 'hidden',
+    marginBottom: 14,
   },
   detailModalHeader: {
     flexDirection: 'row',
@@ -1305,36 +1396,36 @@ const styles = StyleSheet.create({
   },
   detailDateText: {
     fontSize: 12,
-    color: Colors.textNavyMuted,
+    color: Colors.iosTextMuted,
   },
   detailModalScroll: {
     marginVertical: 6,
   },
   detailModalTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textNavyDark,
-    lineHeight: 23,
+    color: Colors.iosTextPrimary,
+    lineHeight: 24,
     marginBottom: 8,
   },
   detailModalContent: {
-    fontSize: 13,
-    color: Colors.textNavySecondary,
-    lineHeight: 20,
+    fontSize: 14,
+    color: Colors.iosTextSecondary,
+    lineHeight: 21,
     marginBottom: 12,
   },
   detailRequirementsSection: {
-    backgroundColor: Colors.yellowContainer,
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: Colors.salmonContainer,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: Colors.yellowBorderLis,
+    borderColor: Colors.salmonBorder,
   },
   detailReqSectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.salmonPrimary,
     marginBottom: 6,
   },
   detailReqItem: {
@@ -1345,19 +1436,19 @@ const styles = StyleSheet.create({
   },
   detailReqText: {
     fontSize: 12,
-    color: Colors.onYellowContainer,
+    color: Colors.iosTextPrimary,
     fontWeight: '600',
     flex: 1,
   },
   detailAdditionalText: {
     fontSize: 12,
-    color: Colors.textNavySecondary,
+    color: Colors.iosTextMuted,
     fontStyle: 'italic',
     marginBottom: 10,
   },
   detailAuthorText: {
     fontSize: 11,
-    color: Colors.textNavyMuted,
+    color: Colors.iosTextMuted,
     marginTop: 4,
   },
   detailApprovalWaBanner: {
@@ -1375,22 +1466,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailApprovalWaTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.onYellowContainer,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400E',
   },
   detailApprovalWaSub: {
     fontSize: 11,
-    color: Colors.onYellowContainer,
-    lineHeight: 16,
+    color: '#78350F',
+    lineHeight: 15,
   },
   detailRequestWaBtn: {
     backgroundColor: Colors.whatsappGreen,
-    borderRadius: 10,
-    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 10,
     gap: 6,
     marginTop: 4,
   },
@@ -1403,8 +1494,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.06)',
-    paddingTop: 12,
+    borderTopColor: Colors.iosBorder,
+    paddingTop: 14,
   },
   detailAdminActionsRow: {
     flexDirection: 'row',
@@ -1417,15 +1508,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 10,
+    gap: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
     borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    backgroundColor: Colors.iosBackground,
   },
   detailAdminBtnText: {
     fontSize: 12,
     fontWeight: '700',
+    color: Colors.iosTextPrimary,
   },
   detailPinBtn: {
     backgroundColor: Colors.skyBlueSurface,
@@ -1440,44 +1534,43 @@ const styles = StyleSheet.create({
     borderColor: Colors.skyBlueSurfaceVariant,
   },
   detailDeleteBtn: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FCA5A5',
-  },
-  detailMainActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    width: '100%',
+    backgroundColor: Colors.iosDangerBg,
+    borderColor: Colors.iosBorder,
   },
   detailShareWideBtn: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 9,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-    backgroundColor: Colors.skyBlueBackground,
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.salmonPrimary,
+    shadowColor: Colors.salmonPrimary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
   },
   detailShareWideBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: Colors.skyBlueHeader,
+    color: Colors.white,
   },
   detailCloseBtn: {
-    flex: 1,
-    backgroundColor: Colors.yellowHighlight,
-    paddingVertical: 9,
+    width: '100%',
+    backgroundColor: Colors.iosBackground,
+    borderWidth: 1,
+    borderColor: Colors.iosBorder,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: 14,
   },
   detailCloseBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.iosTextPrimary,
   },
   formModalContainer: {
     backgroundColor: Colors.white,
@@ -1854,5 +1947,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  readTrackingModalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  readTrackingModalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.skyBlueBackground,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.skyBlueSurfaceVariant,
+  },
+  readTrackingModalText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textNavySecondary,
+  },
+  readTrackingModalTextAdmin: {
+    color: Colors.skyBlueHeader,
+    fontWeight: '700',
+  },
+  adminTrackingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  adminTrackingPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.skyBlueHeader,
   },
 });

@@ -66,11 +66,8 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        isPinnedActive && { borderColor: '#F59E0B', borderWidth: 2 },
-      ]}
-      activeOpacity={0.9}
+      style={styles.card}
+      activeOpacity={0.92}
       onPress={onClick}
     >
       {/* 1. TOP-ALIGNED IMAGE BANNER */}
@@ -243,7 +240,24 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
           <Text style={styles.authorText} numberOfLines={1}>
             Oleh: {announcement.authorName} ({announcement.authorRole})
           </Text>
-          <Text style={styles.readMoreText}>Lihat Selengkapnya →</Text>
+          <View style={styles.footerRightRow}>
+            {Boolean(
+              announcement.readCount ||
+                (announcement.readByUserIds && announcement.readByUserIds.length > 0)
+            ) && (
+              <View style={styles.readCountBadge}>
+                <MaterialCommunityIcons
+                  name="eye-outline"
+                  size={12}
+                  color={Colors.textNavyMuted}
+                />
+                <Text style={styles.readCountText}>
+                  {announcement.readCount || announcement.readByUserIds?.length}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.readMoreText}>Lihat Selengkapnya →</Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -252,22 +266,22 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
+    backgroundColor: Colors.iosCard,
+    borderRadius: 16,
     marginVertical: 6,
     borderWidth: 1,
-    borderColor: Colors.skyBlueSurfaceVariant,
-    elevation: 2,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    borderColor: Colors.iosBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
     overflow: 'hidden',
   },
   imageBannerContainer: {
-    height: 120,
     width: '100%',
-    backgroundColor: Colors.skyBlueSurfaceVariant,
+    aspectRatio: 16 / 9,
+    backgroundColor: Colors.iosBackground,
   },
   bannerImage: {
     width: '100%',
@@ -275,12 +289,12 @@ const styles = StyleSheet.create({
   },
   fallbackBanner: {
     flex: 1,
-    backgroundColor: Colors.skyBlueHeader,
+    backgroundColor: Colors.salmonPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fallbackText: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
     marginTop: 4,
@@ -302,7 +316,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: '#D97706',
+    backgroundColor: Colors.salmonPrimary,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -311,9 +325,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 2,
-    elevation: 3,
+    elevation: 2,
   },
   pinnedBannerBadgeText: {
     color: '#FFFFFF',
@@ -451,7 +465,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     fontFamily: Fonts.bodyBold,
-    color: Colors.skyBlueHeader,
+    color: Colors.salmonPrimary,
+    includeFontPadding: false,
+  },
+  footerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  readCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  readCountText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textNavyMuted,
+    fontFamily: Fonts.bodyMedium,
     includeFontPadding: false,
   },
 });

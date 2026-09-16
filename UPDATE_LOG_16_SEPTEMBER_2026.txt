@@ -1,0 +1,88 @@
+================================================================================
+           CATATAN PEMBARUAN & LOG UPDATE APLIKASI KONEK KELURAHAN
+================================================================================
+Tanggal Rilis : Rabu, 16 September 2026
+Waktu Build   : 17:06 WIB
+Versi Bundle  : Konek-Kelurahan-Update16Ags.apk (~63.1 MB)
+Status Sistem : Production-Ready / Keamanan Terverifikasi
+================================================================================
+
+[1] KEAMANAN & PENGUATAN FIRESTORE RULES (DEFENSIVE HARDENING)
+--------------------------------------------------------------------------------
+- Memperketat `firestore.rules` untuk menutup celah Fatal Privilege Escalation:
+  * Pengguna biasa dicegah mendaftarkan diri atau mengubah profil menjadi 
+    'role: admin' atau 'userRole: STAF_KELURAHAN'. Hanya akun resmi Admin yang 
+    berwenang mempromosikan peran.
+- Proteksi Data Pribadi Warga (Anti-PII Leak):
+  * Warga biasa hanya memiliki hak baca untuk dokumen profil miliknya sendiri.
+  * Direktori seluruh warga hanya dapat diakses oleh Admin & Pengurus RW.
+- Pengamanan Update Dokumen Kegiatan & Pengumuman:
+  * Warga biasa dibatasi hanya bisa memperbarui data kehadiran RSVP, riwayat 
+    bacaan, dan counter. Warga tidak dapat mengubah status 'approvalStatus', 
+    judul, maupun jadwal kegiatan panitia lain.
+- Validasi Keamanan via Google Cloud Shell & Rules Playground:
+  * Pengujian simulasi injeksi payload hacker menghasilkan respon "Simulated write denied".
+  * Pengujian HTTP REST API publik menghasilkan respon "403 PERMISSION_DENIED".
+
+[2] LOGO BARU & REBRANDING VISUAL (MINIMALIST GEOMETRIC STYLE)
+--------------------------------------------------------------------------------
+- Mendesain ulang seluruh aset ikon aplikasi dengan konsep "Tilted Geometric Cube 
+  with Center Cutout" (mirip gaya logo geometris Roblox yang bersih dan modern) 
+  dengan aksen warna Salmon Coral gradient (#FF6B6B).
+- Mengonversi aset ke binary PNG resolusi tinggi di seluruh folder Android launcher:
+  * mipmap-mdpi (48x48)
+  * mipmap-hdpi (72x72)
+  * mipmap-xhdpi (96x96)
+  * mipmap-xxhdpi (144x144)
+  * mipmap-xxxhdpi (192x192)
+  * assets/icon.png & assets/adaptive-icon.png (1024x1024)
+- Membuat komponen vektor native `CivicLogo.tsx` untuk logo tajam di dalam aplikasi 
+  (CivicTopBar & Hero Banner Beranda).
+- Mengubah warna splashscreen dan tema native Android dari biru tua lama menjadi 
+  Clean Pure White (#FFFFFF) dan Salmon Coral (#FF6B6B).
+
+[3] PEROMBAKAN TOTAL UI BERANDA (SUPER APP WARGA MODERN)
+--------------------------------------------------------------------------------
+- Hero Header Personal & Modern:
+  * Avatar profil pengguna dengan border glow dan indikator "Warga Aktif" 
+    (status titik hijau real-time).
+  * Menampilkan sapaan nama pengguna, identitas wilayah RT/RW, dan logo miring fresh.
+- Dynamic Citizen Stats Bar:
+  * Menampilkan ringkasan langsung: "Agenda Bulan Ini" dan "Status Hadir (RSVP)".
+- 4-Grid Quick Actions (Squircle Modern Buttons):
+  1. Daftar Kegiatan     (Akses cepat agenda resmi RT/RW)
+  2. Warta Pengumuman    (Informasi penting & darurat)
+  3. Kalender Agenda     (Pantauan agenda berdasarkan tanggal)
+  4. KTP Digital Warga   (Akses langsung ke data identitas warga)
+- Section Header Beraksen:
+  * Menggunakan bar warna penanda vertikal (Amber Orange & Salmon Coral) dengan 
+    tombol "Lihat Semua".
+
+[4] PERBAIKAN ALUR VERIFIKASI WILAYAH & RESERVASI RSVP
+--------------------------------------------------------------------------------
+- Pembersihan Data Default Warga Baru:
+  * Akun baru atau yang belum terverifikasi TIDAK AKAN langsung terisi data RT/RW 
+    palsu (RT 03 / RW 05 / Sukamaju).
+  * Beranda dan Profil menampilkan status jujur: "Belum Terverifikasi Wilayah" 
+    dan "Belum Terdaftar (Perlu Kode RT/RW)".
+  * Data wilayah resmi baru terisi setelah memasukkan kode verifikasi wilayah yang sah.
+- Integrasi Permohonan Kode Wilayah ke WhatsApp Pengurus:
+  * Modal verifikasi (`VerificationModal.tsx`) kini menyediakan pilihan langsung 
+    ke Kontak Penting Pengurus Wilayah (Ketua RT / RW).
+  * Pengguna dapat memilih pengurus yang dituju dan langsung diarahkan ke WhatsApp 
+    dengan template pesan sopan otomatis untuk meminta kode.
+- Isolasi Status RSVP Per Akun (Per-User RSVP Map):
+  * Memperbaiki bug reservasi bawaan: status RSVP tidak lagi global.
+  * Status RSVP disimpan dan dibaca secara spesifik berdasarkan ID/email masing-masing 
+    pengguna (`rsvpUsers[userKey]`).
+  * Akun baru dipastikan memiliki riwayat RSVP kosong (bersih 100%).
+
+[5] PEROMBAKAN WIDGET ANDROID HOMESCREEN
+--------------------------------------------------------------------------------
+- Memperbarui layout `kegiatan_widget_layout.xml` & `kegiatan_widget_item.xml`.
+- Desain kartu bersih, indikator bar salmon, counter dinamis, dan tombol aksi 
+  "Buka Aplikasi" & "Segarkan" yang responsif.
+
+================================================================================
+               AKHIR DOKUMEN CATATAN PEMBARUAN (UPDATE LOG)
+================================================================================
