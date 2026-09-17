@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
+import { CurvedHeroBanner } from '../components/CurvedHeroBanner';
 import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
@@ -53,29 +54,29 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 0. APPLE IOS LARGE TITLE HEADER */}
-      <View style={styles.largeTitleContainer}>
-        <Text style={styles.largeTitleDate}>
-          {new Date()
-            .toLocaleDateString('id-ID', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })
-            .toUpperCase()}
-        </Text>
-        <Text style={styles.largeTitleText}>
-          Dashboard {role === 'RW' ? 'Rukun Warga' : role === 'RT' ? 'Rukun Tetangga' : 'Kelurahan'}
-        </Text>
-      </View>
+      {/* 1. MIDTRANS-INSPIRED CURVED HERO BANNER */}
+      <CurvedHeroBanner>
+        <View style={styles.largeTitleContainer}>
+          <Text style={styles.largeTitleDate}>
+            {new Date()
+              .toLocaleDateString('id-ID', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })
+              .toUpperCase()}
+          </Text>
+          <Text style={styles.largeTitleText}>
+            Dashboard {role === 'RW' ? 'Rukun Warga' : role === 'RT' ? 'Rukun Tetangga' : 'Kelurahan'}
+          </Text>
+        </View>
 
-      {/* 1. ADMIN HEADER BANNER (Apple Inset Card) */}
-      <View style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View style={styles.heroGreeting}>
             <View style={styles.badgeLabel}>
+              <View style={styles.liveAdminDot} />
               <Text style={styles.badgeLabelText}>
-                KELOLA {role}
+                PENGURUS {role}
               </Text>
             </View>
             <Text style={styles.heroUserName} numberOfLines={1}>
@@ -86,96 +87,94 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
           <View style={styles.heroIconBox}>
             <MaterialCommunityIcons
               name="shield-account"
-              size={28}
-              color={Colors.salmonPrimary}
+              size={24}
+              color={Colors.white}
             />
           </View>
         </View>
 
-        {/* 3 Stat Cards Grid */}
+        {/* 3 Stat Cards Grid with Glassmorphism */}
         <View style={styles.statsRow}>
           <View style={styles.statPill}>
-            <Text style={styles.statNumber}>{activeActivities.length}</Text>
+            <Text style={[styles.statNumber, { color: Colors.iosSuccess }]}>
+              {activeActivities.length}
+            </Text>
             <Text style={styles.statLabel} numberOfLines={1}>
               Terbit Warga
             </Text>
           </View>
 
           <View style={styles.statPill}>
-            <Text style={styles.statNumber}>{pendingCount}</Text>
+            <Text style={[styles.statNumber, { color: Colors.iosWarning }]}>
+              {pendingCount}
+            </Text>
             <Text style={styles.statLabel} numberOfLines={1}>
               Butuh ACC
             </Text>
           </View>
 
           <View style={styles.statPill}>
-            <Text style={styles.statNumber}>{totalRsvp}</Text>
+            <Text style={[styles.statNumber, { color: Colors.salmonPrimary }]}>
+              {totalRsvp}
+            </Text>
             <Text style={styles.statLabel} numberOfLines={1}>
               Total RSVP
             </Text>
           </View>
         </View>
-      </View>
+      </CurvedHeroBanner>
 
-      {/* 2. ACTION BUTTONS */}
-      <View style={styles.actionButtonsCol}>
+      {/* 2. 4-GRID QUICK ADMIN ACTIONS (Sleek Modern Squircles 2x2) */}
+      <View style={styles.quickGridContainer}>
         <TouchableOpacity
-          style={styles.primaryActionButton}
+          style={styles.quickActionCard}
           activeOpacity={0.85}
-          onPress={() => navigation.navigate('CreateEditActivityScreen')}
+          onPress={() => navigation.navigate('KegiatanTab')}
         >
-          <MaterialCommunityIcons
-            name="plus-circle"
-            size={20}
-            color={Colors.white}
-          />
-          <Text style={styles.primaryActionText}>Buat Kegiatan Baru</Text>
+          <View style={[styles.quickActionIcon, { backgroundColor: '#FFEAE8' }]}>
+            <MaterialCommunityIcons name="calendar-text-outline" size={22} color={Colors.salmonPrimary} />
+          </View>
+          <Text style={styles.quickActionLabel}>Daftar Kegiatan</Text>
+          <Text style={styles.quickActionDesc}>Kelola & agenda wilayah</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryActionButton}
+          style={styles.quickActionCard}
           activeOpacity={0.85}
           onPress={() => navigation.navigate('PengumumanTab')}
         >
-          <MaterialCommunityIcons
-            name="bullhorn"
-            size={18}
-            color={Colors.salmonPrimary}
-          />
-          <Text style={styles.secondaryActionText}>
-            Terbitkan Pengumuman Resmi
+          <View style={[styles.quickActionIcon, { backgroundColor: '#FFF5E5' }]}>
+            <MaterialCommunityIcons name="bullhorn-outline" size={22} color="#EA580C" />
+          </View>
+          <Text style={styles.quickActionLabel}>Warta Pengumuman</Text>
+          <Text style={styles.quickActionDesc}>Terbit & pantau warta</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('AdminUserManagementScreen')}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#E8F1FF' }]}>
+            <MaterialCommunityIcons name="account-cog-outline" size={22} color="#0066F6" />
+          </View>
+          <Text style={styles.quickActionLabel}>Kelola Akun Warga</Text>
+          <Text style={styles.quickActionDesc}>
+            {allUsers?.length || 0} Akun • Atur akses
           </Text>
         </TouchableOpacity>
 
-        {/* Tombol Khusus Admin: Kelola Akun & Hak Akses Pengguna */}
-        {(role === 'STAF_KELURAHAN' || isSuperAdmin(currentUser.email)) && (
-          <TouchableOpacity
-            style={styles.userManagementButton}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('AdminUserManagementScreen')}
-          >
-            <View style={styles.userManagementIconBox}>
-              <MaterialCommunityIcons
-                name="account-cog"
-                size={22}
-                color={Colors.salmonPrimary}
-              />
-            </View>
-            <View style={styles.userManagementTextCol}>
-              <Text style={styles.userManagementTitle}>
-                Kelola Akun & Hak Akses Warga
-              </Text>
-              <Text style={styles.userManagementSubtitle}>
-                {allUsers?.length || 0} Akun Masuk • Atur Peran & Profil
-              </Text>
-            </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={22}
-              color={Colors.onYellowContainer}
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('KalenderTab')}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#E8F9ED' }]}>
+            <MaterialCommunityIcons name="calendar-month-outline" size={22} color="#16A34A" />
+          </View>
+          <Text style={styles.quickActionLabel}>Kalender Agenda</Text>
+          <Text style={styles.quickActionDesc}>Pantau jadwal bulanan</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 3. MULTI-TIER APPROVAL PIPELINE FOR RW */}
@@ -328,40 +327,27 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   largeTitleContainer: {
-    marginBottom: 16,
-    paddingTop: 4,
+    marginBottom: 14,
+    paddingTop: 2,
   },
   largeTitleDate: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.iosTextMuted,
+    color: 'rgba(255, 255, 255, 0.65)',
     letterSpacing: 0.8,
     marginBottom: 2,
   },
   largeTitleText: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
-    color: Colors.iosTextPrimary,
+    color: Colors.white,
     letterSpacing: -0.5,
-  },
-  heroCard: {
-    backgroundColor: Colors.iosCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.iosBorder,
-    padding: 18,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
   heroHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   heroGreeting: {
     flex: 1,
@@ -370,30 +356,42 @@ const styles = StyleSheet.create({
   heroIconBox: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.salmonContainer,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0, 102, 246, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 102, 246, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeLabel: {
-    backgroundColor: Colors.salmonContainer,
+    backgroundColor: 'rgba(255, 107, 107, 0.18)',
     borderWidth: 1,
-    borderColor: Colors.salmonBorder,
+    borderColor: 'rgba(255, 107, 107, 0.35)',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    marginBottom: 4,
+    marginBottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  liveAdminDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.salmonPrimary,
   },
   badgeLabelText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.salmonPrimary,
+    color: Colors.salmonWarm,
+    letterSpacing: 0.5,
   },
   heroUserName: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.iosTextPrimary,
+    color: Colors.white,
   },
   statsRow: {
     flexDirection: 'row',
@@ -401,93 +399,60 @@ const styles = StyleSheet.create({
   },
   statPill: {
     flex: 1,
-    backgroundColor: Colors.iosBackground,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.iosBorder,
-    padding: 10,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    padding: 12,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
-    color: Colors.salmonPrimary,
   },
   statLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.iosTextSecondary,
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 2,
   },
-  actionButtonsCol: {
-    gap: 10,
+  quickGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 20,
   },
-  primaryActionButton: {
-    backgroundColor: Colors.salmonPrimary,
-    height: 48,
-    borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: Colors.salmonPrimary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  primaryActionText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  secondaryActionButton: {
-    backgroundColor: Colors.iosCard,
-    height: 46,
-    borderRadius: 14,
+  quickActionCard: {
+    width: '48%',
+    flexGrow: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: Colors.iosBorder,
-    flexDirection: 'row',
+    borderColor: '#ECEEF2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  quickActionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    marginBottom: 10,
   },
-  secondaryActionText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.iosTextPrimary,
-  },
-  userManagementButton: {
-    backgroundColor: Colors.iosCard,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.iosBorder,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  userManagementIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: Colors.salmonContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userManagementTextCol: {
-    flex: 1,
-  },
-  userManagementTitle: {
+  quickActionLabel: {
     fontSize: 13,
     fontWeight: '800',
-    color: Colors.iosTextPrimary,
+    fontFamily: Fonts.headingBold,
+    color: '#1C1C1E',
+    marginBottom: 2,
   },
-  userManagementSubtitle: {
+  quickActionDesc: {
     fontSize: 11,
-    color: Colors.iosTextMuted,
-    marginTop: 2,
+    color: '#8E8E93',
   },
   pipelineSection: {
     marginBottom: 18,

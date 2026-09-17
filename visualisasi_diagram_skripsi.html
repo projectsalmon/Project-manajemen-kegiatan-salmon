@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualisasi Diagram Perancangan Sistem - Komuniva</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #081B38;
+      --primary-light: #0F2D5C;
+      --accent: #FF6B6B;
+      --accent-hover: #FA5252;
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --success: #10B981;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 25px -5px rgba(8, 27, 56, 0.08), 0 8px 10px -6px rgba(8, 27, 56, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding-bottom: 80px;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 48px 24px 36px;
+      border-bottom: 3px solid var(--accent);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .badge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tag-badge {
+      background: rgba(255, 107, 107, 0.2);
+      color: #FF8787;
+      border: 1px solid rgba(255, 107, 107, 0.4);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .tag-version {
+      background: rgba(255, 255, 255, 0.1);
+      color: #E2E8F0;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #CBD5E1;
+      max-width: 800px;
+    }
+
+    .nav-bar {
+      max-width: 1200px;
+      margin: 20px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 0 24px;
+    }
+
+    .nav-tab {
+      background: var(--surface);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-tab:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-1px);
+    }
+
+    .nav-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(8, 27, 56, 0.25);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 28px auto 0;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      background: #FAFCFF;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .card-title-group h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title-group p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-download {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+    }
+
+    .btn-download:hover {
+      background: #DBEAFE;
+      transform: translateY(-1px);
+    }
+
+    .diagram-container {
+      padding: 32px 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: auto;
+      background: #FFFFFF;
+      min-height: 250px;
+    }
+
+    .diagram-container svg {
+      max-width: 100%;
+      height: auto;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.03));
+    }
+
+    .card-footer {
+      padding: 16px 24px;
+      background: #F8FAFC;
+      border-top: 1px solid var(--border);
+      font-size: 13.5px;
+      color: #334155;
+    }
+
+    .card-footer strong {
+      color: var(--primary);
+    }
+
+    .tips-box {
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 14px;
+      color: #065F46;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    @media print {
+      header {
+        position: static;
+        box-shadow: none;
+      }
+      .btn, .nav-bar, .tips-box {
+        display: none !important;
+      }
+      .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        page-break-inside: avoid;
+        margin-bottom: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="badge-wrap">
+        <span class="tag-badge">Dokumentasi Skripsi</span>
+        <span class="tag-version">Komuniva v2.0.1</span>
+      </div>
+      <h1>Visualisasi Diagram Perancangan Sistem</h1>
+      <p class="subtitle">
+        Representasi visual terintegrasi dari seluruh artefak UML dan Model Data aplikasi Komuniva (Sistem Manajemen Kegiatan Warga Terpadu). Anda dapat mengunduh gambar beresolusi tinggi (PNG) untuk langsung disisipkan ke naskah skripsi (Microsoft Word / LaTeX).
+      </p>
+    </div>
+  </header>
+
+  <div class="nav-bar">
+    <button class="nav-tab active" onclick="filterDiagram('all', this)">🌐 Semua Diagram</button>
+    <button class="nav-tab" onclick="filterDiagram('usecase', this)">🎯 Use Case</button>
+    <button class="nav-tab" onclick="filterDiagram('erd', this)">🗄️ ERD</button>
+    <button class="nav-tab" onclick="filterDiagram('activity', this)">⚡ Activity Diagram</button>
+    <button class="nav-tab" onclick="filterDiagram('sequence', this)">⏱️ Sequence Diagram</button>
+    <button class="nav-tab" onclick="filterDiagram('flowchart', this)">📊 Flowchart</button>
+  </div>
+
+  <main>
+    <div class="tips-box">
+      <div>
+        💡 <strong>Tips Skripsi:</strong> Klik tombol <strong>"Unduh Gambar (PNG)"</strong> pada setiap kartu diagram untuk menyimpan gambar beresolusi tinggi (HD) dengan latar belakang putih bersih, siap di-insert ke dokumen Word Anda.
+      </div>
+      <button class="btn btn-download" onclick="window.print()" style="background:#10B981; color:white; border-color:#059669;">
+        🖨️ Cetak / Simpan PDF
+      </button>
+    </div>
+
+    <!-- 1. USE CASE DIAGRAM -->
+    <div class="card diagram-section" data-cat="usecase" id="card-usecase">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>1. Use Case Diagram</h2>
+          <p>Pemetaan aktor dan relasi fungsional sistem (&lt;&lt;include&gt;&gt; & &lt;&lt;extend&gt;&gt;)</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-download" onclick="exportDiagramToPNG('usecase-diagram', 'use_case_diagram_komuniva.png')">
+            📥 Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+      <div class="diagram-container" id="usecase-diagram">
+        <div class="mermaid">
+graph LR
+    Warga(["Warga / Citizen"])
+    RT(["Pengurus RT"])
+    RW(["Pengurus RW"])
+    Posyandu(["Kader Posyandu"])
+    Admin(["Staf Kelurahan / Admin"])
+
+    UC_Auth["Login & Registrasi (Google Auth)"]
+    UC_Verif["Verifikasi Wilayah (Kode Undangan RT/RW)"]
+    UC_ViewAct["Melihat Daftar & Detail Kegiatan"]
+    UC_RSVP["Konfirmasi Kehadiran (RSVP & Reminder)"]
+    UC_Notif["Menerima Notifikasi & Cek Widget Layar Utama"]
+    
+    UC_CreateAct["Mengajukan Kegiatan Baru"]
+    UC_ApproveRW["Review & Persetujuan Tingkat RW"]
+    UC_ApproveAdmin["Review Final & Publikasi Kelurahan"]
+    UC_GenerateCode["Generate & Bagikan Kode Undangan Wilayah"]
+    UC_WA["Integrasi Koordinasi WhatsApp"]
+    
+    UC_Announce["Publikasi Warta Pengumuman"]
+    UC_PosyanduMetric["Pencatatan Imunisasi & Balita"]
+    UC_UserMgmt["Kelola Akun & Penugasan Role"]
+
+    Warga --> UC_Auth
+    Warga --> UC_Verif
+    Warga --> UC_ViewAct
+    Warga --> UC_RSVP
+    Warga --> UC_Notif
+
+    RT --> UC_CreateAct
+    RT --> UC_GenerateCode
+    RT --> UC_Announce
+    RT --> UC_WA
+
+    RW --> UC_ApproveRW
+    RW --> UC_GenerateCode
+    RW --> UC_WA
+
+    Posyandu --> UC_CreateAct
+    Posyandu --> UC_PosyanduMetric
+
+    Admin --> UC_ApproveAdmin
+    Admin --> UC_UserMgmt
+    Admin --> UC_Announce
+
+    UC_Verif -.->|include| UC_Auth
+    UC_RSVP -.->|include| UC_ViewAct
+    UC_RSVP -.->|extend| UC_Notif
+    UC_CreateAct -.->|include| UC_ApproveRW
+    UC_ApproveRW -.->|include| UC_ApproveAdmin
+    UC_ApproveAdmin -.->|extend| UC_WA
+    UC_ApproveRW -.->|extend| UC_WA
+        </div>
+      </div>
+      <div class="card-footer">
+        <strong>Deskripsi Skripsi:</strong> Use Case Diagram di atas mendefinisikan batasan hak akses fungsional (Role-Based Access Control) pada sistem Komuniva, di mana pengajuan kegiatan oleh RT mengikutsertakan relasi validasi bertingkat (&lt;&lt;include&gt;&gt;) menuju persetujuan Pengurus RW dan validasi final Staf Kelurahan sebelum dapat diakses dan di-RSVP oleh Warga terverifikasi.
+      </div>
+    </div>
+
+    <!-- 2. ERD -->
+    <div class="card diagram-section" data-cat="erd" id="card-erd">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>2. Entity Relationship Diagram (ERD)</h2>
+          <p>Model struktur basis data Cloud Firestore dan relasi antar entitas</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-download" onclick="exportDiagramToPNG('erd-diagram', 'erd_diagram_komuniva.png')">
+            📥 Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+      <div class="diagram-container" id="erd-diagram">
+        <div class="mermaid">
+erDiagram
+    USERS ||--o{ RSVP_RECORDS : "melakukan"
+    USERS ||--o{ ACTIVITIES : "membuat / mengorganisir"
+    USERS ||--o{ ANNOUNCEMENTS : "menerbitkan"
+    USERS ||--o{ INVITATION_CODES : "menghasilkan"
+    
+    ACTIVITIES ||--o{ RSVP_RECORDS : "memiliki daftar hadir"
+    ACTIVITIES ||--o{ APPROVAL_LOGS : "memiliki riwayat verifikasi"
+
+    USERS {
+        string id PK "Google UID / Email"
+        string nik "Nomor Induk Kependudukan"
+        string name "Nama Lengkap"
+        string email "Alamat Surel"
+        string phone "Nomor Telepon / WhatsApp"
+        string role "WARGA | RT | RW | POSYANDU | STAF_KELURAHAN"
+        string rt "Nomor RT domisili"
+        string rw "Nomor RW domisili"
+        string kelurahan "Nama Kelurahan"
+        boolean isVerifiedWarga "Status verifikasi kode wilayah"
+        string verifiedCode FK "Relasi ke INVITATION_CODES.code"
+        timestamp verifiedAt "Waktu verifikasi sukses"
+        string avatarUrl "URL foto profil pengguna"
+    }
+
+    ACTIVITIES {
+        string id PK "Unique Activity UUID"
+        string title "Judul kegiatan"
+        string description "Deskripsi lengkap kegiatan"
+        string category "GOTONG_ROYONG | KEAGAMAAN | POSYANDU | OLAHRAGA | RAPAT"
+        string dateIso "Format tanggal ISO YYYY-MM-DD"
+        string formattedDate "Format label tanggal lokal"
+        string timeSlot "Waktu kegiatan (e.g. 08:00 - 11:00 WIB)"
+        string locationName "Nama lokasi / balai warga"
+        string targetRegion "Wilayah sasaran RT/RW"
+        string organizerRole "Role pembuat kegiatan"
+        string organizerName "Nama koordinator kegiatan"
+        int confirmedCount "Jumlah warga hadir"
+        int maybeCount "Jumlah warga ragu-ragu"
+        int quota "Batas kuota peserta"
+        string approvalStatus "WAITING_RW_APPROVAL | WAITING_ADMIN_APPROVAL | PUBLISHED | REJECTED"
+        string rejectionReason "Catatan bila ditolak"
+        string createdByUserId FK "Relasi ke USERS.id"
+        boolean isPinned "Status sematan prioritas"
+        boolean isFeatured "Status kartu sorotan dashboard"
+    }
+
+    RSVP_RECORDS {
+        string id PK "Composite: activityId_userId"
+        string activityId FK "Relasi ke ACTIVITIES.id"
+        string userId FK "Relasi ke USERS.id"
+        string status "ATTENDING | NOT_ATTENDING | MAYBE"
+        timestamp updatedAt "Waktu submit konfirmasi"
+    }
+
+    ANNOUNCEMENTS {
+        string id PK "Announcement UUID"
+        string title "Judul warta pengumuman"
+        string content "Isi pengumuman"
+        string urgency "INFO | PENTING | DARURAT"
+        string targetRegion "Target RT/RW"
+        string authorRole "Role penulis warta"
+        string authorId FK "Relasi ke USERS.id"
+        timestamp createdAt "Waktu penerbitan"
+    }
+
+    INVITATION_CODES {
+        string id PK "Code Document UUID"
+        string code "6 digit token unik unik"
+        string role "RT | RW"
+        string rt "Nomor RT yang diwakili"
+        string rw "Nomor RW yang diwakili"
+        string kelurahan "Nama Kelurahan"
+        string createdByUserId FK "Relasi ke USERS.id"
+        int membersCount "Jumlah warga yang terverifikasi via kode"
+        boolean isActive "Status keaktifan kode"
+    }
+
+    APPROVAL_LOGS {
+        string id PK "Log UUID"
+        string activityId FK "Relasi ke ACTIVITIES.id"
+        string approverId FK "Relasi ke USERS.id"
+        string stage "RW_TIER | KELURAHAN_FINAL"
+        string action "APPROVED | REJECTED"
+        string note "Catatan telaah"
+        timestamp timestamp "Waktu eksekusi aksi"
+    }
+        </div>
+      </div>
+      <div class="card-footer">
+        <strong>Deskripsi Skripsi:</strong> ERD di atas merefleksikan model data penyimpanan Cloud Firestore yang memetakan relasi one-to-many antara entitas USERS dengan ACTIVITIES, ANNOUNCEMENTS, serta isolasi status kehadiran pada entitas RSVP_RECORDS guna mencegah terjadinya race condition saat ratusan warga mengonfirmasi kehadiran secara bersamaan.
+      </div>
+    </div>
+
+    <!-- 3A. ACTIVITY DIAGRAM MULTI TIER -->
+    <div class="card diagram-section" data-cat="activity" id="card-activity-approval">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>3A. Activity Diagram: Alur Persetujuan Bertingkat (Approval Multi-Tier)</h2>
+          <p>Workflow pengajuan kegiatan dari RT &rarr; RW &rarr; Staf Kelurahan &rarr; Terbit</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-download" onclick="exportDiagramToPNG('act-approval-diagram', 'activity_diagram_approval_multi_tier.png')">
+            📥 Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+      <div class="diagram-container" id="act-approval-diagram">
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> BuatProposal: Pengurus RT mengisi formulir kegiatan baru
+    
+    BuatProposal --> ValidasiInput: Klik 'Ajukan Kegiatan'
+    
+    state ValidasiInput <<choice>>
+    ValidasiInput --> FormTidakLengkap: Data form belum valid / kosong
+    FormTidakLengkap --> BuatProposal: Tampilkan pesan peringatan
+    
+    ValidasiInput --> SimpanWaitingRW: Data lengkap & valid
+    SimpanWaitingRW --> NotifikasiRW: Status kegiatan diset 'WAITING_RW_APPROVAL'
+    
+    NotifikasiRW --> ReviewRW: Pengurus RW membuka dan menelaah kegiatan
+    
+    state ReviewRW <<choice>>
+    ReviewRW --> TolakRW: RW menolak usulan
+    TolakRW --> UpdateStatusDitolak: Status diubah ke 'REJECTED' + Catatan revisi
+    UpdateStatusDitolak --> BeritahuPemohon: Notifikasi diteruskan ke Pengurus RT
+    BeritahuPemohon --> [*]
+    
+    ReviewRW --> SetujuiRW: RW menyetujui usulan
+    SetujuiRW --> SimpanWaitingAdmin: Status diubah ke 'WAITING_ADMIN_APPROVAL'
+    SimpanWaitingAdmin --> ReviewAdmin: Staf Kelurahan memverifikasi perizinan final
+    
+    state ReviewAdmin <<choice>>
+    ReviewAdmin --> TolakAdmin: Staf Kelurahan menolak
+    TolakAdmin --> UpdateStatusDitolak
+    
+    ReviewAdmin --> SetujuiAdmin: Staf Kelurahan menyetujui
+    SetujuiAdmin --> PublishKegiatan: Status diubah menjadi 'PUBLISHED'
+    PublishKegiatan --> KirimNotifikasiWarga: Push Notification ke Warga & Sinkronisasi Widget
+    KirimNotifikasiWarga --> Selesai: Kegiatan resmi tampil di beranda aplikasi
+    Selesai --> [*]
+        </div>
+      </div>
+      <div class="card-footer">
+        <strong>Deskripsi Skripsi:</strong> Activity Diagram memodelkan alur kerja birokrasi perizinan kegiatan warga secara terstruktur, di mana sistem menjamin bahwa seluruh kegiatan yang terbit ke ruang publik telah melewati evaluasi kelayakan berjenjang (decision node) oleh pengurus RW dan validasi administratif Staf Kelurahan.
+      </div>
+    </div>
+
+    <!-- 3B. ACTIVITY DIAGRAM VERIFIKASI -->
+    <div class="card diagram-section" data-cat="activity" id="card-activity-verif">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>3B. Activity Diagram: Verifikasi Wilayah Mandiri (Invitation Code)</h2>
+          <p>Workflow validasi kode domisili warga oleh sistem</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-download" onclick="exportDiagramToPNG('act-verif-diagram', 'activity_diagram_verifikasi_wilayah.png')">
+            📥 Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+      <div class="diagram-container" id="act-verif-diagram">
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> BukaVerifikasi: Warga mengakses menu 'Verifikasi Wilayah'
+    BukaVerifikasi --> MasukkanKode: Input 6-digit kode undangan dari RT/RW
+    MasukkanKode --> ValidasiServer: Sistem mencocokkan kode ke koleksi invitationCodes
+    
+    state ValidasiServer <<choice>>
+    ValidasiServer --> KodeSalah: Token tidak ditemukan / status tidak aktif
+    KodeSalah --> TampilkanGagal: Muncul pesan 'Kode tidak valid atau kadaluarsa'
+    TampilkanGagal --> MasukkanKode: Warga mencoba kembali
+    
+    ValidasiServer --> KodeValid: Token cocok dan berstatus aktif
+    KodeValid --> UpdateProfilWarga: Simpan data RT, RW, dan Kelurahan ke profil
+    UpdateProfilWarga --> SetVerifiedTrue: Perbarui atribut isVerifiedWarga = true
+    SetVerifiedTrue --> IncrementMemberCount: Tingkatkan counter jumlah warga terdaftar
+    IncrementMemberCount --> TampilkanSukses: Notifikasi berhasil & Buka akses dashboard warga
+    TampilkanSukses --> [*]
+        </div>
+      </div>
+      <div class="card-footer">
+        <strong>Deskripsi Skripsi:</strong> Activity Diagram ini mendokumentasikan proses otomatisasi verifikasi domisili warga menggunakan token 6 karakter yang digenerate oleh Ketua RT/RW, mencegah akses liar sekaligus memvalidasi wilayah domisili secara instan tanpa birokrasi tatap muka yang lambat.
+      </div>
+    </div>
+
+    <!-- 4. SEQUENCE DIAGRAM -->
+    <div class="card diagram-section" data-cat="sequence" id="card-sequence">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>4. Sequence Diagram: Konfirmasi Kehadiran & Sinkronisasi Widget</h2>
+          <p>Interaksi urut waktu antar layer (View &rarr; Controller &rarr; Service &rarr; Firestore &rarr; Widget)</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-download" onclick="exportDiagramToPNG('sequence-diagram', 'sequence_diagram_rsvp_komuniva.png')">
+            📥 Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+      <div class="diagram-container" id="sequence-diagram">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Warga as Warga (Aktor)
+    participant UI as ActivityDetailScreen (View)
+    participant Ctx as AppContext (Controller/State)
+    participant Svc as firestoreService (Service Layer)
+    participant DB as Cloud Firestore (Database)
+    participant Widget as Native Android Widget (Kotlin)
+
+    Warga->>UI: Tekan tombol konfirmasi kehadiran ("Hadir")
+    activate UI
+    UI->>Ctx: handleRsvp(activityId, "ATTENDING")
+    activate Ctx
+    
+    Ctx->>Ctx: Cek status verifikasi pengguna (isVerifiedWarga)
+    alt Pengguna Belum Terverifikasi
+        Ctx-->>UI: Lempar status: Pengguna belum terverifikasi
+        UI-->>Warga: Munculkan modal dialog "Wajib Verifikasi Wilayah"
+    else Pengguna Terverifikasi
+        Ctx->>Svc: updateActivityRsvp(activityId, userId, "ATTENDING")
+        activate Svc
+        
+        Svc->>DB: Set Document: /activities/{id}/rsvpUsers/{userId} = "ATTENDING"
+        activate DB
+        DB-->>Svc: Response 200 OK (Write Acknowledged)
+        deactivate DB
+        
+        Svc->>DB: Atomic Increment: confirmedCount + 1
+        activate DB
+        DB-->>Svc: Transaction Success
+        deactivate DB
+        
+        Svc-->>Ctx: Return RSVP Result Success
+        deactivate Svc
+        
+        Ctx->>Ctx: Update State Lokal (activities & activeRsvpState)
+        Ctx->>Widget: WidgetUpdateModule.updateWidgetData(latestActivities)
+        activate Widget
+        Widget-->>Ctx: Widget RemoteViews Refreshed
+        deactivate Widget
+        
+        Ctx-->>UI: Callback RSVP Sukses
+        deactivate Ctx
+        
+        UI-->>Warga: Tampilkan Toast "Kehadiran Berhasil Dikonfirmasi" & badge 'Hadir'
+    end
+    deactivate UI
+        </div>
+      </div>
+      <div class="card-footer">
+        <strong>Deskripsi Skripsi:</strong> Sequence Diagram di atas mendokumentasikan pemisahan tanggung jawab pada arsitektur React Native Komuniva, memperlihatkan bagaimana interaksi penekanan tombol konfirmasi kehadiran pada view diteruskan melalui Context Provider ke service layer secara asinkron, disimpan secara atomik pada basis data Cloud Firestore, dan langsung disinkronkan ke widget layar utama Android.
+      </div>
+    </div>
+
+    <!-- 5. FLOWCHART -->
+    <div class="card diagram-section" data-cat="flowchart" id="card-flowchart">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2>5. Flowchart: Algoritma Mesin Status Persetujuan & Hak Akses</h2>
+          <p>Alur logika pemrosesan dan verifikasi integritas data di balik layar aplikasi</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-download" onclick="exportDiagramToPNG('flowchart-diagram', 'flowchart_algoritma_komuniva.png')">
+            📥 Unduh Gambar (PNG)
+          </button>
+        </div>
+      </div>
+      <div class="diagram-container" id="flowchart-diagram">
+        <div class="mermaid">
+flowchart TD
+    Start([Mulai: Aksi Pengguna]) --> CheckAuth{Apakah Pengguna Terautentikasi?}
+    
+    CheckAuth -- Tidak --> Ret401[Arahkan ke Layar Google Login] --> End([Selesai])
+    CheckAuth -- Ya --> CheckAction{Jenis Aksi Sistem}
+    
+    %% Cabang Pengajuan Kegiatan Baru
+    CheckAction -- Pengajuan Kegiatan --> CheckRolePembuat{Role Pembuat?}
+    CheckRolePembuat -- WARGA --> BlockCreate[Tolak: Warga Hanya Berhak Membaca & RSVP] --> End
+    CheckRolePembuat -- RT / POSYANDU --> SetDraftRW[Set Status = WAITING_RW_APPROVAL]
+    CheckRolePembuat -- RW --> SetDraftAdmin[Set Status = WAITING_ADMIN_APPROVAL]
+    CheckRolePembuat -- STAF_KELURAHAN --> SetPublished[Set Status = PUBLISHED]
+    
+    SetDraftRW --> SaveFirestore[Tulis Dokumen ke Firestore /activities]
+    SetDraftAdmin --> SaveFirestore
+    SetPublished --> SaveFirestore
+    
+    %% Cabang Penelaahan / Persetujuan (Approval)
+    CheckAction -- Verifikasi Persetujuan --> CheckApproverRole{Role Peninjau?}
+    
+    CheckApproverRole -- Pengurus RW --> CheckStatusRW{Status Kegiatan Saat Ini?}
+    CheckStatusRW -- WAITING_RW_APPROVAL --> DecisionRW{Keputusan RW?}
+    DecisionRW -- Disetujui --> TransAdmin[Ubah Status: WAITING_ADMIN_APPROVAL] --> LogHistory[Catat ke Riwayat Approval]
+    DecisionRW -- Ditolak --> TransRejectRW[Ubah Status: REJECTED + Alasan] --> LogHistory
+    CheckStatusRW -- Selain WAITING_RW_APPROVAL --> RWNoAccess[Tolak: Di luar Wewenang RW] --> End
+    
+    CheckApproverRole -- Staf Kelurahan --> CheckStatusAdmin{Status Kegiatan Saat Ini?}
+    CheckStatusAdmin -- WAITING_ADMIN_APPROVAL --> DecisionAdmin{Keputusan Kelurahan?}
+    DecisionAdmin -- Disetujui --> TransPublish[Ubah Status: PUBLISHED] --> TriggerNotification[Trigger Push Notification & Update Widget] --> LogHistory
+    DecisionAdmin -- Ditolak --> TransRejectAdmin[Ubah Status: REJECTED + Alasan] --> LogHistory
+    CheckStatusAdmin -- Selain WAITING_ADMIN_APPROVAL --> AdminNoAccess[Tolak: Urutan Tahapan Belum Terpenuhi] --> End
+    
+    LogHistory --> CommitDB[(Komit Transaksi ke Firestore)]
+    SaveFirestore --> CommitDB
+    CommitDB --> SuccessRes[Kirim Respon Sukses ke Antarmuka Klien] --> End
+        </div>
+      </div>
+      <div class="card-footer">
+        <strong>Deskripsi Skripsi:</strong> Flowchart di atas mengilustrasikan algoritma kendali alur (finite state machine logic) yang mengamankan integritas data pengajuan kegiatan masyarakat, memastikan tidak terjadinya bypass atau pelanggaran hak otorisasi pada setiap tingkatan peran administrasi kependudukan.
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Initialize Mermaid with custom themes matching Komuniva
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#081B38',
+        primaryTextColor: '#FFFFFF',
+        primaryBorderColor: '#0F2D5C',
+        lineColor: '#081B38',
+        secondaryColor: '#EFF6FF',
+        tertiaryColor: '#F8FAFC',
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
+        fontSize: '14px'
+      }
+    });
+
+    // Tab Filtering Function
+    function filterDiagram(cat, tabElement) {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      tabElement.classList.add('active');
+
+      const cards = document.querySelectorAll('.diagram-section');
+      cards.forEach(card => {
+        if (cat === 'all' || card.getAttribute('data-cat') === cat) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // High-Resolution PNG Export Function (scale 2.5x for crisp printing in Skripsi)
+    function exportDiagramToPNG(containerId, filename) {
+      const container = document.getElementById(containerId);
+      const svg = container.querySelector('svg');
+
+      if (!svg) {
+        alert('Diagram sedang dimuat, silakan coba sesaat lagi.');
+        return;
+      }
+
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      // Resolve SVG dimensions
+      const bbox = svg.getBoundingClientRect();
+      const scale = 2.5; // High resolution factor for print
+      const width = (bbox.width || 800) * scale;
+      const height = (bbox.height || 600) * scale;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // Fill clean white background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(blobURL);
+
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = canvas.toDataURL('image/png', 1.0);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+
+      img.src = blobURL;
+    }
+  </script>
+</body>
+</html>

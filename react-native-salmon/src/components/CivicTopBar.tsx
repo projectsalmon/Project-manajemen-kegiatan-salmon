@@ -29,11 +29,11 @@ export const CivicTopBar: React.FC<CivicTopBarProps> = ({
     >
       <View style={styles.titleSection}>
         <View style={styles.logoWrapper}>
-          <CivicLogo size={34} rotation="-10deg" />
+          <CivicLogo size={36} />
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.mainTitle} numberOfLines={1}>
-            {titleOverride || 'Kegiatan Kelurahan'}
+            {titleOverride || 'Komuniva'}
           </Text>
           <View style={styles.subtitleRow}>
             <Text style={styles.subTitle}>Sukamaju • RW 05</Text>
@@ -58,19 +58,19 @@ export const CivicTopBar: React.FC<CivicTopBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.iosCard,
+    backgroundColor: Colors.navyDeep,
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.iosBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    shadowColor: Colors.navyDeep,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   titleSection: {
     flexDirection: 'row',
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     fontFamily: Fonts.headingBold,
-    color: Colors.iosTextPrimary,
+    color: Colors.white,
     letterSpacing: -0.2,
   },
   subtitleRow: {
@@ -99,12 +99,12 @@ const styles = StyleSheet.create({
   subTitle: {
     fontSize: 12,
     fontFamily: Fonts.bodyRegular,
-    color: Colors.iosTextMuted,
+    color: 'rgba(255, 255, 255, 0.65)',
   },
   activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: Colors.iosSuccess,
     marginHorizontal: 6,
   },
@@ -117,9 +117,9 @@ const styles = StyleSheet.create({
   officialBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.salmonContainer,
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
     borderWidth: 1,
-    borderColor: '#FFD5D2',
+    borderColor: 'rgba(255, 107, 107, 0.35)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,

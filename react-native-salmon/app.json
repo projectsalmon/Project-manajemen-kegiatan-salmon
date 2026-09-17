@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Kegiatan Kelurahan",
-    "slug": "project-manajemen-kegiatan-salmon",
-    "version": "1.0.0",
+    "name": "Komuniva",
+    "slug": "komuniva-app",
+    "version": "2.0.1",
     "orientation": "portrait",
     "scheme": "com.salmon.app",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#0369A1"
+      "backgroundColor": "#081B38"
     },
     "ios": {
       "supportsTablet": true
@@ -17,7 +17,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0369A1"
+        "backgroundColor": "#081B38"
       },
       "package": "com.salmon.app"
     },

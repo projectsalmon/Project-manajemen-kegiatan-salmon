@@ -89,7 +89,7 @@ export const buildActivityApprovalMessage = (
 
   const message =
     `*PERMOHONAN PERSETUJUAN (ACC) KEGIATAN LINGKUNGAN*\n` +
-    `_Aplikasi Manajemen Lingkungan Konek_\n\n` +
+    `_Aplikasi Komuniva - Sukamaju_\n\n` +
     `Kepada Yth. *${targetName}*,\n\n` +
     `Saya *${sender.name}* (${sender.role === 'RT' ? `Ketua RT ${sender.rt}` : sender.role === 'POSYANDU' ? 'Kader Posyandu' : 'Pengurus Lingkungan'}), bermaksud mengajukan kegiatan baru untuk mendapatkan persetujuan (ACC):\n\n` +
     `📌 *Judul Kegiatan:* ${activity.title}\n` +
@@ -100,7 +100,7 @@ export const buildActivityApprovalMessage = (
     `🎯 *Sasaran Peserta:* ${activity.targetRegion}\n` +
     `👥 *Batas Partisipan:* ${quotaText}\n\n` +
     `📝 *Deskripsi / Rincian:*\n${activity.description}\n\n` +
-    `Mohon kiranya Bapak/Ibu dapat memeriksa dan memberikan *Persetujuan (ACC)* melalui aplikasi Konek agar kegiatan ini dapat dipublikasikan untuk seluruh warga.\n\n` +
+    `Mohon kiranya Bapak/Ibu dapat memeriksa dan memberikan *Persetujuan (ACC)* melalui aplikasi Komuniva agar kegiatan ini dapat dipublikasikan untuk seluruh warga.\n\n` +
     `Terima kasih atas perhatian dan kerjasamanya! 🙏✨`;
 
   return {
@@ -136,7 +136,7 @@ export const buildAnnouncementApprovalMessage = (
 
   const message =
     `*PERMOHONAN PERSETUJUAN (ACC) PENGUMUMAN RESMI*\n` +
-    `_Aplikasi Manajemen Lingkungan Konek_\n\n` +
+    `_Aplikasi Komuniva - Sukamaju_\n\n` +
     `Kepada Yth. *${targetName}*,\n\n` +
     `Saya *${sender.name}* (${sender.role === 'RT' ? `Ketua RT ${sender.rt}` : 'Pengurus RT'}), mengajukan penerbitan pengumuman resmi lingkungan:\n\n` +
     `📢 *Judul:* ${announcement.title}\n` +
@@ -144,7 +144,7 @@ export const buildAnnouncementApprovalMessage = (
     `🎯 *Sasaran Wilayah:* ${announcement.targetRegion}\n` +
     (announcement.formattedDate ? `🗓️ *Jadwal Terkait:* ${announcement.formattedDate}\n` : '') +
     `\n📄 *Isi Pengumuman:*\n${announcement.content}\n\n` +
-    `Mohon kiranya Bapak/Ibu dapat memeriksa dan memberikan *Persetujuan (ACC)* melalui aplikasi Konek agar pengumuman ini segera tersampaikan ke warga.\n\n` +
+    `Mohon kiranya Bapak/Ibu dapat memeriksa dan memberikan *Persetujuan (ACC)* melalui aplikasi Komuniva agar pengumuman ini segera tersampaikan ke warga.\n\n` +
     `Terima kasih banyak atas dukungannya! 🙏✨`;
 
   return {

@@ -1,0 +1,118 @@
+================================================================================
+           CATATAN PEMBARUAN & LOG UPDATE RESMI APLIKASI KOMUNIVA
+================================================================================
+Tanggal Rilis : Kamis, 17 September 2026
+Waktu Build   : 13:30 WIB
+Versi Sistem  : 2.0.0 (Major Release: Rebranding & UI Overhaul)
+Versi Bundle  : Komuniva-Official.apk (~62.5 MB) / Komuniva.apk
+Status Sistem : Production-Ready / Stable Release
+Aturan Versi  : [MAJOR].[MINOR].[PATCH]
+                - Angka Depan (Major) : Pembaruan besar (Rebranding, arsitektur baru)
+                - Angka Belakang      : Pembaruan fitur kecil / perbaikan bug
+================================================================================
+
+[1] REBRANDING TOTAL: KOMUNIVA
+--------------------------------------------------------------------------------
+- Mengganti identitas resmi aplikasi dari "Kegiatan Kelurahan / Konek" menjadi 
+  "KOMUNIVA" (Komunitas Inovatif Warga).
+- Pembaruan metadata sistem Android & Expo:
+  * Application Label: android:label="Komuniva" (strings.xml)
+  * Version Code: 2
+  * Version Name: 2.0.0 (build.gradle & app.json)
+- Pembersihan nama lama di seluruh UI aplikasi:
+  * Top Bar: Menampilkan nama resmi "Komuniva"
+  * Layar Login: "Komuniva: Platform Komunitas & Pelayanan Warga Sukamaju"
+  * Footer Info: "Versi 2.0.0 • Google Identity Services & Cloud Firestore"
+  * WhatsApp Engine: Template pengajuan kegiatan dan pesan permohonan kode 
+    wilayah diperbarui menyebut aplikasi "Komuniva".
+
+[2] LOGO BARU: CIVIC NETWORK NODES (C5)
+--------------------------------------------------------------------------------
+- Menerapkan desain logo baru berbasis jejaring simpul warga yang membentuk 
+  siluet huruf "K" modern dan dinamis di atas squircle Deep Oceanic Navy (#081B38).
+- Melambangkan keterhubungan 5 pilar wilayah: Warga, RT, RW, Posyandu, dan Kelurahan.
+- Aset resolusi tinggi diintegrasikan ke seluruh launcher Android:
+  * assets/icon.png & assets/adaptive-icon.png (1024x1024)
+  * mipmap-mdpi (48x48)
+  * mipmap-hdpi (72x72)
+  * mipmap-xhdpi (96x96)
+  * mipmap-xxhdpi (144x144)
+  * mipmap-xxxhdpi (192x192)
+- Komponen vektor internal CivicLogo.tsx diperbarui untuk merender logo resmi Komuniva.
+- Cadangan logo orisinal Ikan Salmon Origami disimpan aman di:
+  LOG_IKAN_SALMON_ORIGAMI_CADANGAN.jpg.
+
+[3] DESAIN VISUAL MIDTRANS GOVTECH (OCEANIC NAVY & SALMON CORAL)
+--------------------------------------------------------------------------------
+- Mengadopsi palet warna berkelas terinspirasi Midtrans untuk SELURUH ROLE:
+  * Header Deep Oceanic Midnight Navy (#081B38 / #0A2240)
+  * Aksen Sapphire Glow Halo (#0066F6) halus di latar belakang
+  * Aksen Salmon Coral (#FF6B6B) pada tombol aksi utama dan identitas brand
+- Komponen Reusable Baru: CurvedHeroBanner.tsx
+  * Memiliki potongan kurva melengkung halus (Soft Curved Wave Cut) yang 
+    mengalir mulus ke area konten terang di bawahnya.
+  * Tampil konsisten di Dashboard Admin (Kelurahan/RW/RT), Dashboard Warga, 
+    dan Dashboard Posyandu.
+- Metrik Glassmorphism & Kontras Tinggi:
+  * Admin: 3 kartu metrik transparan (Terbit Warga [Hijau], Butuh ACC [Kuning], 
+    Total RSVP [Salmon]).
+  * Warga: Hero profil aktif, stats bar agenda/RSVP, dan 4-grid quick action.
+  * Posyandu: Metrik balita terdata, imunisasi, dan jadwal kegiatan kesehatan.
+
+[4] PEMBARUAN VERSI 2.0.1: REVISI UI & NAVIGASI ANIMASI
+--------------------------------------------------------------------------------
+- Penghapusan Garis Abu-abu Mengganggu:
+  * Menghapus layer semi-transparan `waveCutLayer` pada `CurvedHeroBanner.tsx`.
+  * Bagian dasar banner hero kini melengkung halus presisi (radius 22) dan 
+    bersih 100% dari artefak garis abu-abu kusam.
+- Penyelarasan Dashboard Admin (4-Grid Squircles 2x2):
+  * Mengganti tombol tumpuk panjang dengan 4 kartu kotak squircle modern 
+    persis seperti di Dashboard Warga:
+    1. Daftar Kegiatan     (Akses agenda resmi & tombol tambah kegiatan)
+    2. Warta Pengumuman    (Terbitkan & pantau warta resmi)
+    3. Kelola Akun Warga   (Atur hak akses & profil akun)
+    4. Kalender Agenda     (Pantau jadwal agenda bulanan)
+  * Sesuai alur baru: Admin masuk ke bagian Kegiatan terlebih dahulu untuk 
+    membuat agenda baru via tombol floating (+).
+- Bottom Tab Bar Deep Navy & Animasi Spring Bounce:
+  * Warna bilah navigasi bawah diubah menjadi Deep Oceanic Navy (#081B38) 
+    senada dengan header atas aplikasi.
+  * Dilengkapi pill aktif bercahaya semi-transparan (salmon glow).
+  * Dilengkapi animasi pegas mikro (scaleAnim 0.86 -> 1.0) saat tab ditekan 
+    memberikan feedback sentuhan yang sangat responsif dan memuaskan.
+
+[5] HASIL KOMPILASI & DISTRIBUSI APK (VERSI 2.0.1)
+--------------------------------------------------------------------------------
+- Versi Sistem  : 2.0.1 (Minor Update - Increment Angka Belakang)
+- Version Code  : 3
+- Waktu Build   : 15:04 WIB
+- Kompilasi     : BUILD SUCCESSFUL in 1m 9s
+- File Output Siap Pakai di Folder Utama:
+  1. Komuniva-v2.0.1.apk (~62.5 MB)
+  2. Komuniva-Official.apk (~62.5 MB)
+  3. Komuniva.apk (~62.5 MB)
+- Kompatibel penuh dengan Android 7.0+ (API level 24 hingga 34+).
+
+[6] DOKUMENTASI PERANCANGAN SISTEM LENGKAP (SKRIPSI TEKNIK INFORMATIKA)
+--------------------------------------------------------------------------------
+- Pembuatan Dokumen Perancangan Sistem Komprehensif (Bab 3 & 4 Skripsi):
+  * File: DOKUMENTASI_PERANCANGAN_SISTEM_SKRIPSI.md
+  * Meliputi: Analisis Kebutuhan & Matriks 5 Aktor (Warga, RT, RW, Posyandu, Kelurahan),
+    Use Case Diagram, Entity Relationship Diagram (ERD NoSQL Firestore),
+    Activity Diagram Approval & Verifikasi Wilayah, Sequence Diagram Konfirmasi RSVP &
+    Sinkronisasi Native Android Widget, serta Flowchart Mesin Status Sistem.
+- Halaman Visual Interaktif Diagram:
+  * File: visualisasi_diagram_skripsi.html
+  * Render visual grafis SVG tajam via Mermaid.js, filter tab navigasi diagram, 
+    fitur Cetak/Ekspor PDF, dan tombol download individual PNG 2.5x Ultra-HD.
+- Ekspor Gambar Diagram Siap Tempel ke Microsoft Word (Folder: diagram_skripsi_visual/):
+  1. 01_use_case_diagram.png             - Aktor sistem & relasi include/extend
+  2. 02_erd_diagram.png                  - Model entitas basis data Cloud Firestore
+  3. 03a_activity_diagram_approval.png   - Alur persetujuan bertingkat RT -> RW -> Admin
+  4. 03b_activity_diagram_verifikasi.png - Alur verifikasi kode wilayah otomatis
+  5. 04_sequence_diagram.png             - Interaksi waktu nyata UI -> Context -> Service -> Widget
+  6. 05_flowchart_algoritma.png          - Algoritma mesin status perizinan & proteksi data
+
+================================================================================
+                    AKHIR DOKUMEN CATATAN PEMBARUAN
+================================================================================

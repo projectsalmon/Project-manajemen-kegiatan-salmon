@@ -172,8 +172,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           style={styles.logoImage}
           resizeMode="cover"
         />
-        <Text style={[styles.appTitle, { marginTop: 14 }]}>Kegiatan Kelurahan</Text>
-        <ActivityIndicator size="large" color={Colors.skyBlueHeader} style={{ marginTop: 24 }} />
+        <Text style={[styles.appTitle, { marginTop: 14 }]}>Komuniva</Text>
+        <ActivityIndicator size="large" color={Colors.salmonPrimary} style={{ marginTop: 24 }} />
         <Text style={[styles.appSubtitle, { marginTop: 12 }]}>Memeriksa status akun...</Text>
       </SafeAreaView>
     );
@@ -193,9 +193,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         />
 
         {/* Title & Subtitle */}
-        <Text style={styles.appTitle}>Kegiatan Kelurahan</Text>
+        <Text style={styles.appTitle}>Komuniva</Text>
         <Text style={styles.appSubtitle}>
-          Sistem Manajemen Kegiatan Lingkungan Sukamaju
+          Platform Komunitas & Pelayanan Warga Sukamaju
         </Text>
 
         <View style={styles.cardContainer}>
@@ -230,7 +230,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         </View>
 
         <Text style={styles.versionText}>
-          Versi 1.0.0 • Google Identity Services & Cloud Firestore
+          Versi 2.0.1 • Google Identity Services & Cloud Firestore
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -1,70 +1,56 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Colors } from '../constants/theme';
+import { Image, StyleSheet, View } from 'react-native';
 
 interface CivicLogoProps {
   size?: number;
-  color?: string;
-  innerColor?: string;
   rotation?: string;
 }
 
 /**
- * Minimalist geometric logo inspired by modern luxury tech brands (e.g. tilted Roblox square cube).
- * Rendered using lightweight vector native views with perfect crispness on all screen densities.
+ * Komuniva Official Brand Logo (Civic Network Nodes forming 'K').
+ * Renders the crisp high-resolution brand asset seamlessly inside the app.
  */
 export const CivicLogo: React.FC<CivicLogoProps> = ({
   size = 36,
-  color = Colors.salmonPrimary,
-  innerColor = Colors.white,
-  rotation = '-12deg',
+  rotation,
 }) => {
-  const outerBorderRadius = Math.round(size * 0.22);
-  const innerSize = Math.round(size * 0.38);
-  const innerBorderRadius = Math.round(size * 0.08);
+  const borderRadius = Math.round(size * 0.24);
 
   return (
     <View
       style={[
-        styles.outerCube,
+        styles.container,
         {
           width: size,
           height: size,
-          borderRadius: outerBorderRadius,
-          backgroundColor: color,
-          transform: [{ rotate: rotation }],
+          borderRadius,
+          transform: rotation ? [{ rotate: rotation }] : undefined,
         },
       ]}
     >
-      <View
+      <Image
+        source={require('../../assets/icon.png')}
         style={[
-          styles.innerHole,
-          {
-            width: innerSize,
-            height: innerSize,
-            borderRadius: innerBorderRadius,
-            backgroundColor: innerColor,
-          },
+          styles.logoImage,
+          { width: size, height: size, borderRadius },
         ]}
+        resizeMode="cover"
       />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  outerCube: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.salmonPrimary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.28,
-    shadowRadius: 5,
-    elevation: 4,
+  container: {
+    overflow: 'hidden',
+    shadowColor: '#081B38',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  innerHole: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
 });

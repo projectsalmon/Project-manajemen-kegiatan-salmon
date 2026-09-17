@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityCard } from '../components/ActivityCard';
+import { CurvedHeroBanner } from '../components/CurvedHeroBanner';
 import { Colors } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 
@@ -22,55 +23,71 @@ export const PosyanduHomeScreen: React.FC<PosyanduHomeScreenProps> = ({ navigati
     (a) => a.category === 'POSYANDU' || a.category === 'KESEHATAN'
   );
 
+  const todayFormatted = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. HERO POSYANDU BANNER */}
-      <View style={styles.heroCard}>
+      {/* 1. MIDTRANS-INSPIRED CURVED HERO BANNER */}
+      <CurvedHeroBanner>
+        <View style={styles.largeTitleContainer}>
+          <Text style={styles.largeTitleDate}>{todayFormatted.toUpperCase()}</Text>
+          <Text style={styles.largeTitleText}>Dashboard Posyandu</Text>
+        </View>
+
         <View style={styles.heroHeader}>
           <View style={styles.heroGreeting}>
             <View style={styles.badgeLabel}>
-              <Text style={styles.badgeLabelText}>DASHBOARD KADER POSYANDU</Text>
+              <View style={styles.livePosyanduDot} />
+              <Text style={styles.badgeLabelText}>KADER KESEHATAN</Text>
             </View>
             <Text style={styles.heroUserName} numberOfLines={1}>
               {currentUser.name}
             </Text>
           </View>
 
-          <MaterialCommunityIcons
-            name="heart-pulse"
-            size={36}
-            color={Colors.white}
-          />
+          <View style={styles.heroIconBox}>
+            <MaterialCommunityIcons
+              name="heart-pulse"
+              size={24}
+              color={Colors.salmonPrimary}
+            />
+          </View>
         </View>
 
-        {/* Posyandu Metrics Grid */}
+        {/* Posyandu Metrics Grid with Glassmorphism */}
         <View style={styles.metricsRow}>
           <View style={styles.metricPill}>
-            <Text style={styles.metricNumber}>60</Text>
+            <Text style={[styles.metricNumber, { color: Colors.iosSuccess }]}>60</Text>
             <Text style={styles.metricLabel} numberOfLines={1}>
               Balita Terdata
             </Text>
           </View>
 
           <View style={styles.metricPill}>
-            <Text style={styles.metricNumber}>42</Text>
+            <Text style={[styles.metricNumber, { color: '#38BDF8' }]}>42</Text>
             <Text style={styles.metricLabel} numberOfLines={1}>
               Peserta Imunisasi
             </Text>
           </View>
 
           <View style={styles.metricPill}>
-            <Text style={styles.metricNumber}>{posyanduActivities.length}</Text>
+            <Text style={[styles.metricNumber, { color: Colors.salmonPrimary }]}>
+              {posyanduActivities.length}
+            </Text>
             <Text style={styles.metricLabel} numberOfLines={1}>
-              Jadwal Posyandu
+              Jadwal Aktif
             </Text>
           </View>
         </View>
-      </View>
+      </CurvedHeroBanner>
 
       {/* 2. PROMINENT ACTION CTA BUTTON */}
       <TouchableOpacity
@@ -83,7 +100,7 @@ export const PosyanduHomeScreen: React.FC<PosyanduHomeScreenProps> = ({ navigati
         <MaterialCommunityIcons
           name="plus-circle"
           size={20}
-          color={Colors.onYellowContainer}
+          color={Colors.white}
         />
         <Text style={styles.createButtonText}>
           Buat Jadwal Posyandu / Kesehatan
@@ -146,22 +163,28 @@ export const PosyanduHomeScreen: React.FC<PosyanduHomeScreenProps> = ({ navigati
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.skyBlueBackground,
+    backgroundColor: Colors.iosBackground,
   },
   contentContainer: {
     padding: 16,
     paddingBottom: 110,
   },
-  heroCard: {
-    backgroundColor: Colors.posyanduPink,
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  largeTitleContainer: {
+    marginBottom: 14,
+    paddingTop: 2,
+  },
+  largeTitleDate: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.65)',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  largeTitleText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: -0.5,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -174,22 +197,44 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   badgeLabel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 107, 107, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.35)',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 4,
+    borderRadius: 8,
+    marginBottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  livePosyanduDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.salmonPrimary,
   },
   badgeLabelText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.white,
+    color: Colors.salmonWarm,
+    letterSpacing: 0.5,
   },
   heroUserName: {
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '800',
     color: Colors.white,
+  },
+  heroIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricsRow: {
     flexDirection: 'row',
@@ -197,39 +242,46 @@ const styles = StyleSheet.create({
   },
   metricPill: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 12,
-    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    padding: 12,
   },
   metricNumber: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
-    color: Colors.white,
   },
   metricLabel: {
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 2,
   },
   createButton: {
-    backgroundColor: Colors.yellowHighlight,
-    height: 52,
-    borderRadius: 16,
+    backgroundColor: Colors.salmonPrimary,
+    height: 48,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
+    marginBottom: 20,
     gap: 8,
+    shadowColor: Colors.salmonPrimary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 2,
   },
   createButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    color: Colors.onYellowContainer,
+    color: Colors.white,
   },
   sectionHeading: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: Colors.textNavyDark,
+    color: Colors.iosTextPrimary,
     marginBottom: 10,
   },
   programsRow: {
@@ -239,10 +291,11 @@ const styles = StyleSheet.create({
   },
   programCard: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.iosCard,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
+    borderColor: Colors.iosBorder,
   },
   programTitle: {
     fontSize: 13,

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Animated, Linking, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   NavigationContainer,
@@ -45,6 +45,51 @@ const HomeScreenRouter: React.FC<{ navigation: any }> = ({ navigation }) => {
   return <AdminHomeScreen navigation={navigation} />;
 };
 
+// Custom animated spring bounce tab button
+const AnimatedTabButton: React.FC<any> = ({ children, onPress, ...props }) => {
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.86,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <TouchableOpacity
+      {...props}
+      activeOpacity={1}
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[props.style, { flex: 1 }]}
+    >
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+        }}
+      >
+        {children}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
 const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { currentUser } = useApp();
   const insets = useSafeAreaInsets();
@@ -65,21 +110,28 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
+          tabBarButton: (props) => <AnimatedTabButton {...props} />,
           tabBarActiveTintColor: Colors.salmonPrimary,
-          tabBarInactiveTintColor: Colors.iosTextMuted,
+          tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.55)',
           tabBarStyle: {
-            backgroundColor: Colors.iosCard,
+            backgroundColor: Colors.navyDeep,
             borderTopWidth: 1,
-            borderTopColor: Colors.iosBorder,
-            height: 56 + bottomInset,
-            paddingBottom: bottomInset,
-            paddingTop: 6,
+            borderTopColor: 'rgba(255, 255, 255, 0.08)',
+            height: 60 + bottomInset,
+            paddingBottom: bottomInset + 2,
+            paddingTop: 8,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -3 },
+            shadowOpacity: 0.15,
+            shadowRadius: 6,
           },
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '700',
             fontFamily: Fonts.bodyBold,
             includeFontPadding: false,
+            marginTop: 2,
           },
         }}
       >
@@ -89,11 +141,13 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           options={{
             tabBarLabel: 'Beranda',
             tabBarIcon: ({ color, size, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? 'home' : 'home-outline'}
-                size={size}
-                color={focused ? Colors.salmonPrimary : color}
-              />
+              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
+                <MaterialCommunityIcons
+                  name={focused ? 'home' : 'home-outline'}
+                  size={22}
+                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
+                />
+              </View>
             ),
           }}
         />
@@ -104,11 +158,13 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           options={{
             tabBarLabel: 'Kegiatan',
             tabBarIcon: ({ color, size, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? 'format-list-checks' : 'format-list-bulleted'}
-                size={size}
-                color={focused ? Colors.salmonPrimary : color}
-              />
+              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
+                <MaterialCommunityIcons
+                  name={focused ? 'format-list-checks' : 'format-list-bulleted'}
+                  size={22}
+                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
+                />
+              </View>
             ),
           }}
         />
@@ -119,11 +175,13 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           options={{
             tabBarLabel: 'Warta',
             tabBarIcon: ({ color, size, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? 'bullhorn' : 'bullhorn-outline'}
-                size={size}
-                color={focused ? Colors.salmonPrimary : color}
-              />
+              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
+                <MaterialCommunityIcons
+                  name={focused ? 'bullhorn' : 'bullhorn-outline'}
+                  size={22}
+                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
+                />
+              </View>
             ),
           }}
         />
@@ -134,11 +192,13 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           options={{
             tabBarLabel: 'Kalender',
             tabBarIcon: ({ color, size, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? 'calendar-month' : 'calendar-month-outline'}
-                size={size}
-                color={focused ? Colors.salmonPrimary : color}
-              />
+              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
+                <MaterialCommunityIcons
+                  name={focused ? 'calendar-month' : 'calendar-month-outline'}
+                  size={22}
+                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
+                />
+              </View>
             ),
           }}
         />
@@ -149,11 +209,13 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           options={{
             tabBarLabel: 'Profil',
             tabBarIcon: ({ color, size, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? 'account' : 'account-outline'}
-                size={size}
-                color={focused ? Colors.salmonPrimary : color}
-              />
+              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
+                <MaterialCommunityIcons
+                  name={focused ? 'account' : 'account-outline'}
+                  size={22}
+                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
+                />
+              </View>
             ),
           }}
         />
@@ -326,5 +388,15 @@ const styles = StyleSheet.create({
   mainTabContainer: {
     flex: 1,
     backgroundColor: Colors.iosBackground,
+  },
+  tabIconBox: {
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconBoxActive: {
+    backgroundColor: 'rgba(255, 107, 107, 0.16)',
   },
 });

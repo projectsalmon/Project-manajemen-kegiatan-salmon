@@ -71,7 +71,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       cleanNumber = '62' + cleanNumber.substring(1);
     }
     const message = encodeURIComponent(
-      `Halo ${contact.nameTitle}, saya warga baru ingin meminta Kode Undangan Wilayah untuk verifikasi akun di aplikasi Konek. Terima kasih!`
+      `Halo ${contact.nameTitle}, saya warga baru ingin meminta Kode Undangan Wilayah untuk verifikasi akun di aplikasi Komuniva. Terima kasih!`
     );
     Linking.openURL(`https://api.whatsapp.com/send?phone=${cleanNumber}&text=${message}`).catch(
       () => showToast('Tidak dapat membuka WhatsApp')

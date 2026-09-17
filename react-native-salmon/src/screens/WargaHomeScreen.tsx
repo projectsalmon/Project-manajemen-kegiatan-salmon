@@ -12,6 +12,7 @@ import { ActivityCard } from '../components/ActivityCard';
 import { AnnouncementCard } from '../components/AnnouncementCard';
 import { VerificationModal } from '../components/VerificationModal';
 import { CivicLogo } from '../components/CivicLogo';
+import { CurvedHeroBanner } from '../components/CurvedHeroBanner';
 import { Colors, Fonts } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { isItemPinned } from '../types';
@@ -55,8 +56,8 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. ULTRA MODERN CITIZEN HERO BANNER */}
-      <View style={styles.heroCard}>
+      {/* 1. ULTRA MODERN CITIZEN HERO BANNER (MIDTRANS CURVED) */}
+      <CurvedHeroBanner>
         <View style={styles.heroTopRow}>
           <View style={styles.avatarRow}>
             <TouchableOpacity
@@ -94,11 +95,11 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
 
           {/* Minimalist Geometric Brand Logo */}
           <View style={styles.heroLogoWrapper}>
-            <CivicLogo size={38} rotation="-14deg" />
+            <CivicLogo size={36} />
           </View>
         </View>
 
-        {/* Dynamic Citizen Stats Pill Bar */}
+        {/* Dynamic Citizen Stats Pill Bar (Glassmorphic) */}
         <View style={styles.statsBar}>
           <View style={styles.statItem}>
             <View style={styles.statIconBox}>
@@ -113,16 +114,16 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
           <View style={styles.statDivider} />
 
           <View style={styles.statItem}>
-            <View style={[styles.statIconBox, { backgroundColor: '#E8F9ED' }]}>
-              <MaterialCommunityIcons name="account-check" size={18} color="#16A34A" />
+            <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.18)' }]}>
+              <MaterialCommunityIcons name="account-check" size={18} color={Colors.iosSuccess} />
             </View>
             <View>
-              <Text style={[styles.statValue, { color: '#16A34A' }]}>{attendingCount}</Text>
+              <Text style={[styles.statValue, { color: Colors.iosSuccess }]}>{attendingCount}</Text>
               <Text style={styles.statTitle}>Hadir (RSVP)</Text>
             </View>
           </View>
         </View>
-      </View>
+      </CurvedHeroBanner>
 
       {/* UNVERIFIED RESIDENT ALERT BANNER (Soft Warm Warning) */}
       {!currentUser.isVerifiedWarga && (
@@ -296,12 +297,12 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     backgroundColor: '#FFEAE8',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.salmonPrimary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -336,31 +337,31 @@ const styles = StyleSheet.create({
   dateLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: 'rgba(255, 255, 255, 0.65)',
     letterSpacing: 0.2,
   },
   liveDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#34C759',
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.iosSuccess,
     marginHorizontal: 6,
   },
   liveText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#34C759',
+    color: Colors.iosSuccess,
   },
   greetingName: {
     fontSize: 19,
     fontWeight: '800',
     fontFamily: Fonts.headingBold,
-    color: '#1C1C1E',
+    color: Colors.white,
     letterSpacing: -0.3,
   },
   regionSubText: {
     fontSize: 12,
-    color: '#636366',
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 2,
     fontWeight: '500',
   },
@@ -369,13 +370,13 @@ const styles = StyleSheet.create({
   },
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ECEEF2',
+    borderColor: 'rgba(255, 255, 255, 0.14)',
   },
   statItem: {
     flex: 1,
@@ -387,7 +388,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.salmonContainer,
+    backgroundColor: 'rgba(255, 107, 107, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -395,18 +396,18 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     fontFamily: Fonts.headingBold,
-    color: Colors.salmonPrimary,
+    color: Colors.salmonWarm,
   },
   statTitle: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#636366',
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 1,
   },
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     marginHorizontal: 10,
   },
   unverifiedBanner: {

@@ -9,11 +9,21 @@ import {
 } from '../types';
 
 export const Colors = {
-  // Apple Clean iOS Palette
-  iosBackground: '#F2F2F7',
+  // Midtrans GovTech Oceanic Navy & Sapphire Glow Palette
+  navyDeep: '#081B38',
+  navyHeader: '#0A2240',
+  navySurface: '#0F2F57',
+  navySurfaceLight: 'rgba(255, 255, 255, 0.08)',
+  navyBorder: 'rgba(255, 255, 255, 0.14)',
+  sapphireBlue: '#0066F6',
+  sapphireGlow: 'rgba(0, 102, 246, 0.16)',
+  sapphireLight: '#E8F1FF',
+
+  // Apple Clean & Modern Surface
+  iosBackground: '#F4F6FB',
   iosCard: '#FFFFFF',
-  iosCardSecondary: '#F9F9FB',
-  iosBorder: '#E5E5EA',
+  iosCardSecondary: '#F8FAFC',
+  iosBorder: '#E2E8F0',
   iosSeparator: 'rgba(60, 60, 67, 0.12)',
 
   // Warm Salmon & Coral Accent
@@ -21,26 +31,26 @@ export const Colors = {
   salmonWarm: '#FA8072',
   salmonDark: '#E05656',
   salmonContainer: '#FFEAE8',
-  salmonBorder: '#E5E5EA',
+  salmonBorder: '#FFD0CC',
   onSalmonContainer: '#8B1E1E',
 
   // Apple System Text & Labels (High Contrast, Senior-friendly)
-  iosTextPrimary: '#1C1C1E',
-  iosTextSecondary: '#3A3A3C',
-  iosTextMuted: '#8E8E93',
+  iosTextPrimary: '#0F172A',
+  iosTextSecondary: '#334155',
+  iosTextMuted: '#64748B',
 
   // Apple Semantic Colors
-  iosSuccess: '#34C759',
-  iosSuccessBg: '#E8F9ED',
-  iosWarning: '#FF9500',
-  iosWarningBg: '#FFF5E5',
-  iosDanger: '#FF3B30',
-  iosDangerBg: '#FEECEB',
-  iosBlue: '#007AFF',
-  iosBlueBg: '#EAF3FF',
+  iosSuccess: '#10B981',
+  iosSuccessBg: '#E6F9F0',
+  iosWarning: '#F59E0B',
+  iosWarningBg: '#FEF3C7',
+  iosDanger: '#EF4444',
+  iosDangerBg: '#FEE2E2',
+  iosBlue: '#0066F6',
+  iosBlueBg: '#E8F1FF',
 
-  // Backwards-Compatible Mappings (Updated to Apple Clean Theme)
-  skyBlueBackground: '#F2F2F7',
+  // Backwards-Compatible Mappings
+  skyBlueBackground: '#F4F6FB',
   skyBlueSurface: '#FFFFFF',
   skyBlueSurfaceVariant: '#F2F2F7',
   skyBlueHeader: '#FF6B6B',

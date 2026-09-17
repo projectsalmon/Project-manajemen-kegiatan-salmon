@@ -260,9 +260,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     const msg =
       `📢 *KODE UNDANGAN WARGA RESMI*\n` +
       `Kepada warga lingkungan ${item.description}:\n\n` +
-      `Silakan masukkan kode berikut di aplikasi *Konek* untuk verifikasi domisili & akses reservasi kegiatan:\n\n` +
+      `Silakan masukkan kode berikut di aplikasi *Komuniva* untuk verifikasi domisili & akses reservasi kegiatan:\n\n` +
       `🔑 *KODE: ${item.code}*\n\n` +
-      `Buka aplikasi Konek ➡️ Tab Profil ➡️ Masukkan Kode Undangan.`;
+      `Buka aplikasi Komuniva ➡️ Tab Profil ➡️ Masukkan Kode Undangan.`;
 
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
     Linking.openURL(url).catch(() =>

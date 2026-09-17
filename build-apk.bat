@@ -1,7 +1,7 @@
 @echo off
 setlocal
 echo ===================================================
-echo   Build File APK Android (Konek - Update 16 Agustus)
+echo   Build File APK Android (Komuniva - Official Release)
 echo ===================================================
 echo.
 echo Menyiapkan proses kompilasi APK Standalone (Offline Bundle)...
@@ -17,10 +17,14 @@ if %ERRORLEVEL% EQU 0 (
     echo ===================================================
     echo    BUILD BERHASIL! Standalone APK Siap Pakai
     echo ===================================================
-    copy /y "%~dp0react-native-salmon\android\app\build\outputs\apk\release\app-release.apk" "%~dp0Konek-Kelurahan-Update16Ags.apk" >nul
+    copy /y "%~dp0react-native-salmon\android\app\build\outputs\apk\release\app-release.apk" "%~dp0Komuniva-Official.apk" >nul
+    copy /y "%~dp0react-native-salmon\android\app\build\outputs\apk\release\app-release.apk" "%~dp0Komuniva-v2.0.1.apk" >nul
+    copy /y "%~dp0react-native-salmon\android\app\build\outputs\apk\release\app-release.apk" "%~dp0Komuniva.apk" >nul
     echo.
     echo File APK sudah siap di folder utama:
-    echo --^> Konek-Kelurahan-Update16Ags.apk
+    echo --^> Komuniva-Official.apk
+    echo --^> Komuniva-v2.0.1.apk
+    echo --^> Komuniva.apk
     echo.
     echo Anda dapat langsung menyalin file ini ke HP dan menginstallnya!
 ) else (
