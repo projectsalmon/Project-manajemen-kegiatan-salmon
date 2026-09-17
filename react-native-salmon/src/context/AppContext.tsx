@@ -19,6 +19,7 @@ import { initializeNotifications, triggerNotification, registerForPushNotificati
 import {
   ActivityCategoryType,
   ActivityItem,
+  ActivityReport,
   AnnouncementItem,
   AnnouncementUrgencyType,
   ApprovalStatusType,
@@ -328,6 +329,21 @@ interface AppContextType {
     fileIdOrUrl: string,
     mediaType?: 'PHOTO' | 'VIDEO'
   ) => Promise<boolean>;
+  submitActivityReport: (
+    activityId: string,
+    reportData: {
+      notes: string;
+      actualAttendeesCount: number;
+      budgetIncome?: number | null;
+      budgetSpent?: number | null;
+      budgetNotes?: string | null;
+      photoUrls: string[];
+    }
+  ) => Promise<void>;
+  verifyActivityReport: (
+    activityId: string,
+    level: 'RW' | 'KELURAHAN'
+  ) => Promise<void>;
   readItemIds: Set<string>;
   markItemAsRead: (itemId: string, type: 'ACTIVITY' | 'ANNOUNCEMENT') => Promise<void>;
   isItemRead: (itemId: string) => boolean;
@@ -2013,6 +2029,106 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Video dokumentasi dihapus.');
   };
 
+  const submitActivityReport = async (
+    activityId: string,
+    reportData: {
+      notes: string;
+      actualAttendeesCount: number;
+      budgetIncome?: number | null;
+      budgetSpent?: number | null;
+      budgetNotes?: string | null;
+      photoUrls: string[];
+    }
+  ) => {
+    const reportId = `report_${Date.now()}`;
+    const newReport: ActivityReport = {
+      id: reportId,
+      activityId,
+      submittedByUserId: currentUserRef.current.id,
+      submittedByUserName: currentUserRef.current.name,
+      submittedByUserRole: currentUserRef.current.role,
+      submittedAt: new Date().toISOString(),
+      notes: reportData.notes,
+      actualAttendeesCount: reportData.actualAttendeesCount,
+      budgetIncome: reportData.budgetIncome || null,
+      budgetSpent: reportData.budgetSpent || null,
+      budgetNotes: reportData.budgetNotes || null,
+      photoUrls: reportData.photoUrls || [],
+      status: 'SUBMITTED',
+      qrVerificationCode: `KMV-LPJ-${activityId.slice(-5).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+    };
+
+    setActivities((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== activityId) return item;
+        return {
+          ...item,
+          report: newReport,
+          photos: Array.from(new Set([...(item.photos || []), ...newReport.photoUrls])),
+        };
+      });
+      persistActivities(updated);
+      return updated;
+    });
+
+    try {
+      await updateDoc(doc(db, 'activities', activityId), {
+        report: sanitizeForFirestore(newReport as any),
+      });
+    } catch (e) {
+      console.warn('Gagal simpan report ke Firestore:', e);
+    }
+    showToast('Berita Acara & Dokumentasi berhasil diterbitkan!');
+  };
+
+  const verifyActivityReport = async (activityId: string, level: 'RW' | 'KELURAHAN') => {
+    const timestamp = new Date().toISOString();
+    let updatedReport: ActivityReport | null = null;
+
+    setActivities((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id !== activityId || !item.report) return item;
+        const currentRep = item.report;
+        if (level === 'RW') {
+          updatedReport = {
+            ...currentRep,
+            status: 'VERIFIED_RW',
+            verifiedByRwName: currentUserRef.current.name,
+            verifiedAtRw: timestamp,
+          };
+        } else {
+          updatedReport = {
+            ...currentRep,
+            status: 'VERIFIED_KELURAHAN',
+            verifiedByAdminName: currentUserRef.current.name,
+            verifiedAtAdmin: timestamp,
+          };
+        }
+        return {
+          ...item,
+          report: updatedReport,
+        };
+      });
+      persistActivities(updated);
+      return updated;
+    });
+
+    if (updatedReport) {
+      try {
+        await updateDoc(doc(db, 'activities', activityId), {
+          report: sanitizeForFirestore(updatedReport as any),
+        });
+      } catch (e) {
+        console.warn('Gagal verifikasi report di Firestore:', e);
+      }
+      showToast(
+        level === 'RW'
+          ? 'Berita Acara berhasil disahkan oleh Pengurus RW!'
+          : 'Berita Acara resmi disahkan & diarsipkan oleh Staf Kelurahan!'
+      );
+    }
+  };
+
   const addDocumentationMediaToDrive = async (
     activityId: string,
     params: {
@@ -2916,6 +3032,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addDocumentationMediaToDrive,
         deleteDocumentationMediaFromDrive,
         linkDocumentationMediaFromDrive,
+        submitActivityReport,
+        verifyActivityReport,
         readItemIds,
         markItemAsRead,
         isItemRead,

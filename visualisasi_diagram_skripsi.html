@@ -398,9 +398,11 @@ erDiagram
     USERS ||--o{ ACTIVITIES : "membuat / mengorganisir"
     USERS ||--o{ ANNOUNCEMENTS : "menerbitkan"
     USERS ||--o{ INVITATION_CODES : "menghasilkan"
+    USERS ||--o{ ACTIVITY_REPORTS : "menyusun / mengesahkan"
     
     ACTIVITIES ||--o{ RSVP_RECORDS : "memiliki daftar hadir"
     ACTIVITIES ||--o{ APPROVAL_LOGS : "memiliki riwayat verifikasi"
+    ACTIVITIES ||--o| ACTIVITY_REPORTS : "memiliki berita acara LPJ"
 
     USERS {
         string id PK "Google UID / Email"
@@ -479,6 +481,22 @@ erDiagram
         string action "APPROVED | REJECTED"
         string note "Catatan telaah"
         timestamp timestamp "Waktu eksekusi aksi"
+    }
+
+    ACTIVITY_REPORTS {
+        string id PK "Report UUID"
+        string activityId FK "Relasi ke ACTIVITIES.id"
+        string submittedByUserId FK "Relasi ke USERS.id"
+        string notes "Notulensi dan capaian hasil kegiatan"
+        int actualAttendeesCount "Kehadiran riil warga"
+        int budgetIncome "Realisasi kas / iuran masuk"
+        int budgetSpent "Realisasi pengeluaran riil"
+        string budgetNotes "Keterangan anggaran"
+        string status "SUBMITTED | VERIFIED_RW | VERIFIED_KELURAHAN"
+        string verifiedByRwName "Nama pengesah tingkat RW"
+        string verifiedByAdminName "Nama pengesah tingkat Kelurahan"
+        string qrVerificationCode "Kode token integritas dokumen"
+        timestamp submittedAt "Waktu pelaporan"
     }
         </div>
       </div>

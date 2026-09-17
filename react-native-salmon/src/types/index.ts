@@ -115,6 +115,30 @@ export interface ActivityItem {
   readByUserIds?: string[];
   readCount?: number;
   mediaArchive?: MediaArchiveItem[];
+  report?: ActivityReport | null;
+}
+
+export type ReportStatusType = 'SUBMITTED' | 'VERIFIED_RW' | 'VERIFIED_KELURAHAN';
+
+export interface ActivityReport {
+  id: string;
+  activityId: string;
+  submittedByUserId: string;
+  submittedByUserName: string;
+  submittedByUserRole: UserRoleType;
+  submittedAt: string; // ISO date string
+  notes: string; // Notulensi / Hasil Musyawarah / Capaian Kegiatan
+  actualAttendeesCount: number; // Kehadiran riil
+  budgetIncome?: number | null; // Pemasukan / kas
+  budgetSpent?: number | null; // Pengeluaran riil
+  budgetNotes?: string | null; // Rincian catatan anggaran
+  photoUrls: string[]; // Foto dokumentasi terpilih
+  status: ReportStatusType;
+  verifiedByRwName?: string | null;
+  verifiedAtRw?: string | null;
+  verifiedByAdminName?: string | null;
+  verifiedAtAdmin?: string | null;
+  qrVerificationCode?: string;
 }
 
 export interface MediaArchiveItem {

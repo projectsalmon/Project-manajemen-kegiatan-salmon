@@ -21,6 +21,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { MapPreviewCard } from '../components/MapPreviewCard';
 import { VerificationModal } from '../components/VerificationModal';
 import { WhatsAppApprovalModal } from '../components/WhatsAppApprovalModal';
+import { PostActivityReportModal } from '../components/PostActivityReportModal';
+import { FormalReportModal } from '../components/FormalReportModal';
 import { CategoryMeta, Colors, UserRolesMeta } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { RsvpStatusType } from '../types';
@@ -49,6 +51,8 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     addDocumentationMediaToDrive,
     deleteDocumentationMediaFromDrive,
     linkDocumentationMediaFromDrive,
+    submitActivityReport,
+    verifyActivityReport,
     showToast,
     markItemAsRead,
   } = useApp();
@@ -57,6 +61,8 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [isUploadPhotoPickerVisible, setIsUploadPhotoPickerVisible] = useState(false);
   const [isUploadVideoModalVisible, setIsUploadVideoModalVisible] = useState(false);
+  const [isReportFormModalVisible, setIsReportFormModalVisible] = useState(false);
+  const [isFormalReportModalVisible, setIsFormalReportModalVisible] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [drivePhotoUrlInput, setDrivePhotoUrlInput] = useState('');
   const [mediaFilter, setMediaFilter] = useState<MediaFilterType>('ALL');
@@ -378,6 +384,23 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     Linking.openURL(videoUrl).catch(() => {
       showToast('Tidak dapat memutar video langsung dari URL ini.');
     });
+  };
+
+  const handleSaveReport = async (reportData: {
+    notes: string;
+    actualAttendeesCount: number;
+    budgetIncome?: number | null;
+    budgetSpent?: number | null;
+    budgetNotes?: string | null;
+    photoUrls: string[];
+  }) => {
+    if (!activity) return;
+    await submitActivityReport(activity.id, reportData);
+  };
+
+  const handleVerifyReport = async (level: 'RW' | 'KELURAHAN') => {
+    if (!activity) return;
+    await verifyActivityReport(activity.id, level);
   };
 
   const currentRsvp = activity.userRsvpStatus;
@@ -962,6 +985,185 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             </>
           )}
         </View>
+
+        {/* 3.5 DOKUMENTASI BERITA ACARA & LPJ RESMI BERJENJANG */}
+        <View style={styles.lpjSectionCard}>
+          <View style={styles.lpjHeaderRow}>
+            <View style={styles.lpjHeaderTitleGroup}>
+              <View style={styles.lpjIconCircle}>
+                <MaterialCommunityIcons
+                  name={activity.report ? 'file-document-check' : 'file-document-edit-outline'}
+                  size={22}
+                  color="#FF6B6B"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.lpjSectionTitle}>Berita Acara & LPJ Kegiatan</Text>
+                <Text style={styles.lpjSectionSubtitle}>
+                  {activity.report
+                    ? activity.report.status === 'VERIFIED_KELURAHAN'
+                      ? 'Sah & Terarsip Resmi Kelurahan'
+                      : activity.report.status === 'VERIFIED_RW'
+                      ? 'Telah Disahkan oleh Pengurus RW'
+                      : 'Laporan Masuk (Menunggu Telaah RW)'
+                    : 'Dokumentasi & Notulensi Pasca-Kegiatan'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Status Pill Badge */}
+            {activity.report && (
+              <View
+                style={[
+                  styles.lpjStatusPill,
+                  {
+                    backgroundColor:
+                      activity.report.status === 'VERIFIED_KELURAHAN'
+                        ? '#DCFCE7'
+                        : activity.report.status === 'VERIFIED_RW'
+                        ? '#EFF6FF'
+                        : '#FEF3C7',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.lpjStatusPillText,
+                    {
+                      color:
+                        activity.report.status === 'VERIFIED_KELURAHAN'
+                          ? '#15803D'
+                          : activity.report.status === 'VERIFIED_RW'
+                          ? '#1D4ED8'
+                          : '#B45309',
+                    },
+                  ]}
+                >
+                  {activity.report.status === 'VERIFIED_KELURAHAN'
+                    ? 'Arsip Sah'
+                    : activity.report.status === 'VERIFIED_RW'
+                    ? 'Disahkan RW'
+                    : 'Telaah RW'}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {activity.report ? (
+            <View style={styles.lpjReportBody}>
+              {/* Stats Bar */}
+              <View style={styles.lpjMiniStatsRow}>
+                <View style={styles.lpjMiniStatItem}>
+                  <Text style={styles.lpjMiniStatLabel}>Kehadiran Riil</Text>
+                  <Text style={styles.lpjMiniStatVal}>
+                    {activity.report.actualAttendeesCount} Warga
+                  </Text>
+                </View>
+                <View style={styles.lpjMiniStatDivider} />
+                <View style={styles.lpjMiniStatItem}>
+                  <Text style={styles.lpjMiniStatLabel}>Target RSVP</Text>
+                  <Text style={styles.lpjMiniStatVal}>{activity.confirmedCount} Warga</Text>
+                </View>
+                {activity.report.budgetSpent !== null &&
+                  activity.report.budgetSpent !== undefined && (
+                    <>
+                      <View style={styles.lpjMiniStatDivider} />
+                      <View style={styles.lpjMiniStatItem}>
+                        <Text style={styles.lpjMiniStatLabel}>Biaya Riil</Text>
+                        <Text style={[styles.lpjMiniStatVal, { color: '#DC2626' }]}>
+                          Rp {activity.report.budgetSpent.toLocaleString('id-ID')}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+              </View>
+
+              {/* Notulensi snippet */}
+              <View style={styles.lpjNotesSnippetBox}>
+                <Text style={styles.lpjNotesSnippetLabel}>Ringkasan Hasil Kegiatan:</Text>
+                <Text style={styles.lpjNotesSnippetText} numberOfLines={3}>
+                  "{activity.report.notes}"
+                </Text>
+              </View>
+
+              {/* Foto thumbnail lampiran jika ada */}
+              {activity.report.photoUrls && activity.report.photoUrls.length > 0 && (
+                <View style={styles.lpjPhotosThumbRow}>
+                  {activity.report.photoUrls.slice(0, 4).map((url, i) => (
+                    <Image key={i} source={{ uri: url }} style={styles.lpjThumbImg} />
+                  ))}
+                  {activity.report.photoUrls.length > 4 && (
+                    <View style={styles.lpjMoreThumb}>
+                      <Text style={styles.lpjMoreThumbText}>
+                        +{activity.report.photoUrls.length - 4}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Action Buttons */}
+              <View style={styles.lpjActionBtnsRow}>
+                <TouchableOpacity
+                  style={styles.lpjViewFormalDocBtn}
+                  activeOpacity={0.85}
+                  onPress={() => setIsFormalReportModalVisible(true)}
+                >
+                  <MaterialCommunityIcons
+                    name="file-certificate"
+                    size={18}
+                    color={Colors.white}
+                  />
+                  <Text style={styles.lpjViewFormalDocBtnText}>
+                    Lihat Berita Acara & Lembar LPJ
+                  </Text>
+                </TouchableOpacity>
+
+                {(currentUser.role === 'RT' ||
+                  currentUser.role === 'RW' ||
+                  currentUser.role === 'POSYANDU' ||
+                  currentUser.role === 'STAF_KELURAHAN') && (
+                  <TouchableOpacity
+                    style={styles.lpjEditBtn}
+                    activeOpacity={0.8}
+                    onPress={() => setIsReportFormModalVisible(true)}
+                  >
+                    <MaterialCommunityIcons name="pencil" size={18} color="#081B38" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.lpjEmptyBody}>
+              <Text style={styles.lpjEmptyDesc}>
+                Kegiatan ini belum memiliki Berita Acara & Laporan Pertanggungjawaban (LPJ) resmi untuk disetorkan ke RW dan Kelurahan.
+              </Text>
+              {currentUser.role === 'RT' ||
+              currentUser.role === 'RW' ||
+              currentUser.role === 'POSYANDU' ||
+              currentUser.role === 'STAF_KELURAHAN' ? (
+                <TouchableOpacity
+                  style={styles.lpjCreateReportBtn}
+                  activeOpacity={0.85}
+                  onPress={() => setIsReportFormModalVisible(true)}
+                >
+                  <MaterialCommunityIcons
+                    name="file-document-plus"
+                    size={18}
+                    color={Colors.white}
+                  />
+                  <Text style={styles.lpjCreateReportBtnText}>
+                    Buat Berita Acara & LPJ Kegiatan
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.lpjWargaHintText}>
+                  Pengurus RT/RW sedang menyusun dokumentasi resmi kegiatan ini.
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
         </View>
       </ScrollView>
 
@@ -1447,6 +1649,34 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           onSuccessSent={() => setIsWhatsAppModalVisible(false)}
         />
       )}
+
+      {/* 11. FORMAL REPORT / LPJ PREVIEW MODAL */}
+      <FormalReportModal
+        visible={isFormalReportModalVisible}
+        onClose={() => setIsFormalReportModalVisible(false)}
+        activity={activity}
+        currentUser={currentUser}
+        onVerifyReport={handleVerifyReport}
+        onEditReport={
+          currentUser.role === 'RT' ||
+          currentUser.role === 'RW' ||
+          currentUser.role === 'POSYANDU' ||
+          currentUser.role === 'STAF_KELURAHAN'
+            ? () => {
+                setIsFormalReportModalVisible(false);
+                setIsReportFormModalVisible(true);
+              }
+            : undefined
+        }
+      />
+
+      {/* 12. POST ACTIVITY REPORT / LPJ FORM MODAL */}
+      <PostActivityReportModal
+        visible={isReportFormModalVisible}
+        onClose={() => setIsReportFormModalVisible(false)}
+        activity={activity}
+        onSubmit={handleSaveReport}
+      />
     </View>
   );
 };
@@ -2464,5 +2694,195 @@ const styles = StyleSheet.create({
     color: Colors.textNavySecondary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  lpjSectionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  lpjHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 12,
+  },
+  lpjHeaderTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  lpjIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lpjSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#081B38',
+  },
+  lpjSectionSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  lpjStatusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  lpjStatusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  lpjReportBody: {
+    paddingTop: 14,
+  },
+  lpjMiniStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+  },
+  lpjMiniStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  lpjMiniStatDivider: {
+    width: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  lpjMiniStatLabel: {
+    fontSize: 10.5,
+    color: '#64748B',
+    marginBottom: 2,
+  },
+  lpjMiniStatVal: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#081B38',
+  },
+  lpjNotesSnippetBox: {
+    backgroundColor: '#FAFCFF',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#EFF6FF',
+    marginBottom: 12,
+  },
+  lpjNotesSnippetLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E40AF',
+    marginBottom: 4,
+  },
+  lpjNotesSnippetText: {
+    fontSize: 12.5,
+    color: '#334155',
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  lpjPhotosThumbRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  lpjThumbImg: {
+    width: 54,
+    height: 54,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  lpjMoreThumb: {
+    width: 54,
+    height: 54,
+    borderRadius: 8,
+    backgroundColor: '#081B38',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lpjMoreThumbText: {
+    color: Colors.white,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  lpjActionBtnsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  lpjViewFormalDocBtn: {
+    flex: 1,
+    backgroundColor: '#081B38',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  lpjViewFormalDocBtnText: {
+    color: Colors.white,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  lpjEditBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  lpjEmptyBody: {
+    paddingTop: 14,
+    alignItems: 'center',
+  },
+  lpjEmptyDesc: {
+    fontSize: 12.5,
+    color: '#64748B',
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  lpjCreateReportBtn: {
+    backgroundColor: '#081B38',
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  lpjCreateReportBtnText: {
+    color: Colors.white,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  lpjWargaHintText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontStyle: 'italic',
   },
 });

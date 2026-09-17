@@ -113,6 +113,32 @@ Aturan Versi  : [MAJOR].[MINOR].[PATCH]
   5. 04_sequence_diagram.png             - Interaksi waktu nyata UI -> Context -> Service -> Widget
   6. 05_flowchart_algoritma.png          - Algoritma mesin status perizinan & proteksi data
 
+[7] MODUL DOKUMENTASI & BERITA ACARA LPJ RESMI BERJENJANG
+--------------------------------------------------------------------------------
+- Fitur Laporan Pertanggungjawaban Pasca-Kegiatan (Post-Event Report):
+  * Input Notulensi / Hasil Keputusan / Capaian Kegiatan oleh RT / Koordinator.
+  * Input Presensi Hadir Riil Warga (dibandingkan target RSVP).
+  * Akuntabilitas Anggaran / Kas (Pemasukan iuran warga & realisasi biaya pengeluaran).
+  * Seleksi foto dokumentasi kegiatan untuk dilampirkan ke berkas resmi.
+  * Komponen: PostActivityReportModal.tsx
+- Generator Lembar Surat Berita Acara (LPJ Resmi) Ber-Kop Surat Dinas:
+  * Kop Surat Resmi: Kabupaten/Kota, Kecamatan Sukamaju, Kelurahan Sukamaju, RW & RT.
+  * Nomor Registrasi Dokumen Resmi: BA-XXXXX/KMV/RT03RW05/bulan/tahun.
+  * Lembar Pengesahan Tiga Tingkat:
+    1. Koordinator Pelaksana / Ketua RT
+    2. Mengetahui Pengurus RW
+    3. Mengesahkan & Mengarsipkan Kepala Kelurahan Sukamaju
+  * QR Code & Digital Integrity Hash: KMV-LPJ-...
+  * Bagikan format berita acara resmi via WhatsApp / Share.
+  * Pengesahan berjenjang satu-klik untuk peran RW dan Staf Kelurahan.
+  * Komponen: FormalReportModal.tsx
+- Integrasi Layar Detail Kegiatan (ActivityDetailScreen.tsx):
+  * Menampilkan kartu status Berita Acara (Telaah RW / Disahkan RW / Arsip Sah).
+  * Menampilkan statistik kehadiran riil, notulensi ringkas, dan thumbnail foto.
+- Sinkronisasi Dokumen Skripsi:
+  * Entitas ACTIVITY_REPORTS ditambahkan ke ERD pada DOKUMENTASI_PERANCANGAN_SISTEM_SKRIPSI.md,
+    visualisasi_diagram_skripsi.html, dan diagram_skripsi_visual/02_erd_diagram.png.
+
 ================================================================================
                     AKHIR DOKUMEN CATATAN PEMBARUAN
 ================================================================================
