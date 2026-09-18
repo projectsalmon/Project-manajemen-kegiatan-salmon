@@ -348,7 +348,7 @@ interface AppContextType {
   markItemAsRead: (itemId: string, type: 'ACTIVITY' | 'ANNOUNCEMENT') => Promise<void>;
   isItemRead: (itemId: string) => boolean;
   isOffline: boolean;
-  syncOfflineData: () => Promise<void>;
+  syncOfflineData: (silent?: boolean) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -595,7 +595,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, 'activities'),
+      { includeMetadataChanges: true },
       (snapshot) => {
+        if (!snapshot.metadata.fromCache) {
+          setIsOffline(false);
+        }
         const items: ActivityItem[] = [];
         snapshot.forEach((docSnap) => {
           if (deletedIdsRef.current.has(docSnap.id)) {
@@ -690,6 +694,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       (error) => {
         console.warn('Firestore activities listener error:', error);
+        setIsOffline(true);
       }
     );
 
@@ -700,7 +705,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, 'announcements'),
+      { includeMetadataChanges: true },
       (snapshot) => {
+        if (!snapshot.metadata.fromCache) {
+          setIsOffline(false);
+        }
         const items: AnnouncementItem[] = [];
         snapshot.forEach((docSnap) => {
           if (deletedIdsRef.current.has(docSnap.id)) {
@@ -765,6 +774,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       (error) => {
         console.warn('Firestore announcements listener error:', error);
+        setIsOffline(true);
       }
     );
 
@@ -2829,11 +2839,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
 
-  const syncOfflineData = async () => {
+  const syncOfflineData = async (silent: boolean = false) => {
     try {
       // 1. Sync activities
       const actSnap = await getDocs(collection(db, 'activities'));
-      setIsOffline(false);
+      if (!actSnap.metadata.fromCache) {
+        setIsOffline(false);
+      }
       if (!actSnap.empty) {
         const items: ActivityItem[] = [];
         actSnap.forEach((docSnap) => {
@@ -2952,21 +2964,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           );
         }
       }
+
+      if (!silent) {
+        showToast('Data kegiatan & warta berhasil diperbarui secara online!');
+      }
     } catch (err) {
       console.warn('syncOfflineData offline mode:', err);
       setIsOffline(true);
+      if (!silent) {
+        showToast('Sedang offline. Data kegiatan & warta tetap tersimpan di perangkat.');
+      }
     }
   };
 
-  // Re-sync data on App active state
+  // Re-sync data on App active state and background interval check
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
-        syncOfflineData();
+        syncOfflineData(true);
       }
     });
+
+    const backgroundTimer = setInterval(() => {
+      syncOfflineData(true);
+    }, 30000);
+
     return () => {
       subscription.remove();
+      clearInterval(backgroundTimer);
     };
   }, []);
 

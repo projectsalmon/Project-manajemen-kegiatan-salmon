@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,8 +23,18 @@ interface WargaHomeScreenProps {
 }
 
 export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) => {
-  const { currentUser, activities, announcements, updateRsvpStatus } = useApp();
+  const { currentUser, activities, announcements, updateRsvpStatus, syncOfflineData } = useApp();
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await syncOfflineData(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Warga only sees PUBLISHED activities and announcements
   const publishedActivities = activities.filter((a) => a.approvalStatus === 'PUBLISHED');
@@ -55,6 +66,14 @@ export const WargaHomeScreen: React.FC<WargaHomeScreenProps> = ({ navigation }) 
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          colors={[Colors.salmonPrimary]}
+          tintColor={Colors.salmonPrimary}
+        />
+      }
     >
       {/* 1. ULTRA MODERN CITIZEN HERO BANNER (MIDTRANS CURVED) */}
       <CurvedHeroBanner>

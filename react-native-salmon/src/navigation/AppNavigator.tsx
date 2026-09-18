@@ -51,7 +51,7 @@ const AnimatedTabButton: React.FC<any> = ({ children, onPress, ...props }) => {
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.86,
+      toValue: 0.88,
       useNativeDriver: true,
       speed: 50,
       bounciness: 4,
@@ -70,11 +70,19 @@ const AnimatedTabButton: React.FC<any> = ({ children, onPress, ...props }) => {
   return (
     <TouchableOpacity
       {...props}
-      activeOpacity={1}
+      activeOpacity={0.9}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[props.style, { flex: 1 }]}
+      style={[
+        props.style,
+        {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflow: 'visible',
+        },
+      ]}
     >
       <Animated.View
         style={{
@@ -82,6 +90,7 @@ const AnimatedTabButton: React.FC<any> = ({ children, onPress, ...props }) => {
           alignItems: 'center',
           justifyContent: 'center',
           width: '100%',
+          flex: 1,
         }}
       >
         {children}
@@ -90,10 +99,59 @@ const AnimatedTabButton: React.FC<any> = ({ children, onPress, ...props }) => {
   );
 };
 
+// Animated Tab Icon with active spring bounce transition
+const TabIconItem: React.FC<{
+  iconName: any;
+  focusedIconName: any;
+  focused: boolean;
+}> = ({ iconName, focusedIconName, focused }) => {
+  const bounceAnim = React.useRef(new Animated.Value(focused ? 1.05 : 1)).current;
+
+  React.useEffect(() => {
+    if (focused) {
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: 1.18,
+          duration: 130,
+          useNativeDriver: true,
+        }),
+        Animated.spring(bounceAnim, {
+          toValue: 1.05,
+          friction: 4,
+          tension: 50,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.timing(bounceAnim, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.tabIconBox,
+        focused && styles.tabIconBoxActive,
+        { transform: [{ scale: bounceAnim }] },
+      ]}
+    >
+      <MaterialCommunityIcons
+        name={focused ? focusedIconName : iconName}
+        size={22}
+        color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.6)'}
+      />
+    </Animated.View>
+  );
+};
+
 const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { currentUser } = useApp();
   const insets = useSafeAreaInsets();
-  const bottomInset = insets.bottom > 0 ? insets.bottom : 10;
+  const bottomInset = insets.bottom > 0 ? insets.bottom : 12;
 
   const roleMeta = UserRolesMeta[currentUser.role] || UserRolesMeta.WARGA;
 
@@ -117,14 +175,19 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
             backgroundColor: Colors.navyDeep,
             borderTopWidth: 1,
             borderTopColor: 'rgba(255, 255, 255, 0.08)',
-            height: 60 + bottomInset,
+            height: 64 + bottomInset,
             paddingBottom: bottomInset + 2,
-            paddingTop: 8,
-            elevation: 8,
+            paddingTop: 6,
+            elevation: 10,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: -3 },
-            shadowOpacity: 0.15,
+            shadowOpacity: 0.2,
             shadowRadius: 6,
+          },
+          tabBarItemStyle: {
+            paddingVertical: 2,
+            justifyContent: 'center',
+            alignItems: 'center',
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -140,14 +203,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           component={HomeScreenRouter}
           options={{
             tabBarLabel: 'Beranda',
-            tabBarIcon: ({ color, size, focused }) => (
-              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
-                <MaterialCommunityIcons
-                  name={focused ? 'home' : 'home-outline'}
-                  size={22}
-                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
-                />
-              </View>
+            tabBarIcon: ({ focused }) => (
+              <TabIconItem
+                iconName="home-outline"
+                focusedIconName="home"
+                focused={focused}
+              />
             ),
           }}
         />
@@ -157,14 +218,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           component={ActivityListScreen}
           options={{
             tabBarLabel: 'Kegiatan',
-            tabBarIcon: ({ color, size, focused }) => (
-              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
-                <MaterialCommunityIcons
-                  name={focused ? 'format-list-checks' : 'format-list-bulleted'}
-                  size={22}
-                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
-                />
-              </View>
+            tabBarIcon: ({ focused }) => (
+              <TabIconItem
+                iconName="format-list-bulleted"
+                focusedIconName="format-list-checks"
+                focused={focused}
+              />
             ),
           }}
         />
@@ -174,14 +233,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           component={AnnouncementListScreen}
           options={{
             tabBarLabel: 'Warta',
-            tabBarIcon: ({ color, size, focused }) => (
-              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
-                <MaterialCommunityIcons
-                  name={focused ? 'bullhorn' : 'bullhorn-outline'}
-                  size={22}
-                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
-                />
-              </View>
+            tabBarIcon: ({ focused }) => (
+              <TabIconItem
+                iconName="bullhorn-outline"
+                focusedIconName="bullhorn"
+                focused={focused}
+              />
             ),
           }}
         />
@@ -191,14 +248,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           component={CalendarScreen}
           options={{
             tabBarLabel: 'Kalender',
-            tabBarIcon: ({ color, size, focused }) => (
-              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
-                <MaterialCommunityIcons
-                  name={focused ? 'calendar-month' : 'calendar-month-outline'}
-                  size={22}
-                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
-                />
-              </View>
+            tabBarIcon: ({ focused }) => (
+              <TabIconItem
+                iconName="calendar-month-outline"
+                focusedIconName="calendar-month"
+                focused={focused}
+              />
             ),
           }}
         />
@@ -208,14 +263,12 @@ const MainTabNavigator: React.FC<{ navigation: any }> = ({ navigation }) => {
           component={ProfileScreen}
           options={{
             tabBarLabel: 'Profil',
-            tabBarIcon: ({ color, size, focused }) => (
-              <View style={[styles.tabIconBox, focused && styles.tabIconBoxActive]}>
-                <MaterialCommunityIcons
-                  name={focused ? 'account' : 'account-outline'}
-                  size={22}
-                  color={focused ? Colors.salmonPrimary : 'rgba(255, 255, 255, 0.55)'}
-                />
-              </View>
+            tabBarIcon: ({ focused }) => (
+              <TabIconItem
+                iconName="account-outline"
+                focusedIconName="account"
+                focused={focused}
+              />
             ),
           }}
         />
@@ -390,13 +443,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.iosBackground,
   },
   tabIconBox: {
-    paddingHorizontal: 12,
-    paddingVertical: 3,
+    minWidth: 44,
+    height: 28,
+    paddingHorizontal: 8,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   tabIconBoxActive: {
-    backgroundColor: 'rgba(255, 107, 107, 0.16)',
+    backgroundColor: 'rgba(255, 107, 107, 0.22)',
   },
 });

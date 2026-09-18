@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,7 +28,19 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
     rwRejectActivity,
     adminApproveActivity,
     adminRejectActivity,
+    syncOfflineData,
   } = useApp();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await syncOfflineData(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const role = currentUser.role;
 
@@ -44,7 +57,7 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
   const pendingCount =
     role === 'RW' ? pendingRwApproval.length : pendingAdminApproval.length;
   const totalRsvp = activeActivities.reduce(
-    (sum, a) => sum + (a.confirmedCount || 0),
+    (acc, curr) => acc + (curr.confirmedCount || 0),
     0
   );
 
@@ -53,6 +66,14 @@ export const AdminHomeScreen: React.FC<AdminHomeScreenProps> = ({ navigation }) 
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          colors={[Colors.salmonPrimary]}
+          tintColor={Colors.salmonPrimary}
+        />
+      }
     >
       {/* 1. MIDTRANS-INSPIRED CURVED HERO BANNER */}
       <CurvedHeroBanner>

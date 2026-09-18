@@ -5,6 +5,7 @@ import {
   Image,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
@@ -42,11 +43,22 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
     togglePinAnnouncement,
     showToast,
     markItemAsRead,
+    syncOfflineData,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedUrgency, setSelectedUrgency] =
     useState<AnnouncementUrgencyType | null>(null);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await syncOfflineData(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Dialog & Modal State
   const [selectedForDetail, setSelectedForDetail] =
@@ -531,6 +543,14 @@ export const AnnouncementListScreen: React.FC<{ route?: any }> = ({ route }) => 
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listPadding}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors.salmonPrimary]}
+            tintColor={Colors.salmonPrimary}
+          />
+        }
         renderItem={({ item }) => (
           <AnnouncementCard
             announcement={item}

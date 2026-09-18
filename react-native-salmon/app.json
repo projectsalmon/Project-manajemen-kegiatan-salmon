@@ -2,7 +2,7 @@
   "expo": {
     "name": "Komuniva",
     "slug": "komuniva-app",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "orientation": "portrait",
     "scheme": "com.salmon.app",
     "userInterfaceStyle": "light",

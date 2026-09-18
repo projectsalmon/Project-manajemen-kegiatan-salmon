@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,11 +29,22 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
     selectedRegionFilter,
     setSelectedRegionFilter,
     updateRsvpStatus,
+    syncOfflineData,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState(false);
   const [pendingActivityRsvp, setPendingActivityRsvp] = useState<{ id: string; status: RsvpStatusType } | null>(null);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await syncOfflineData(false);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleRsvpWithVerification = (activityId: string, newStatus: RsvpStatusType) => {
     if (currentUser.role === 'WARGA' && !currentUser.isVerifiedWarga && newStatus !== 'NONE') {
@@ -250,6 +262,14 @@ export const ActivityListScreen: React.FC<ActivityListScreenProps> = ({ navigati
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listPadding}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={[Colors.salmonPrimary]}
+              tintColor={Colors.salmonPrimary}
+            />
+          }
           renderItem={({ item }) => (
             <ActivityCard
               activity={item}
